@@ -103,6 +103,14 @@ reproducible by anyone, anywhere. For notebooks in GitHub repositories and in
 gists, nbviewer lite shows an _Execute on Binder_ button at the top of the
 page.
 
+[Try Jupyter](https://jupyter.org/try-jupyter/) runs JupyterLab and Jupyter
+Notebook in your browser, with [JupyterLite](https://jupyterlite.readthedocs.io/)
+kernels for Python and a few other languages. For every notebook, nbviewer
+lite shows _Open in JupyterLab_ and _Open in Jupyter Notebook_ buttons at the
+top of the page, which open a copy of the notebook there. Libraries that the
+notebook needs may not be available in the browser, and Try Jupyter keeps your
+changes in your browser's storage only.
+
 ## Why does the Execute on Binder button lead to a Binder failure?
 
 Binder tries to build a Docker image containing the notebooks and requirements

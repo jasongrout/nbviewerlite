@@ -7,6 +7,7 @@ import {
   gistData,
   type GitHub,
   headerLinks,
+  jupyterliteLinks,
   links,
   markdown,
   notebook,
@@ -88,6 +89,7 @@ test('a notebook in a gist', async ({ page, github, web }) => {
         'Execute on Binder',
         `https://mybinder.org/v2/gist/fperez/${GIST}/master?filepath=analysis.ipynb`
       ],
+      ...jupyterliteLinks(rawUrl(several, 'analysis.ipynb')),
       [
         'View on nbviewer.org',
         `https://nbviewer.org/gist/fperez/${GIST}/analysis.ipynb`

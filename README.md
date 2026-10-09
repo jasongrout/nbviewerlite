@@ -34,6 +34,14 @@ Paths match nbviewer.org's, so changing the hostname is enough:
   and `/format/slides/` (a reveal.js slideshow). Notebook pages link to the
   formats that apply, and their links to other notebooks stay in the format,
   as on nbviewer.org.
+- Notebook pages link to the notebook in JupyterLab and in Jupyter Notebook
+  on a [JupyterLite](https://jupyterlite.readthedocs.io/) site (by default
+  [Try Jupyter](https://jupyter.org/try-jupyter/)), where it runs in the
+  browser. JupyterLite downloads the notebook from the URL this site loaded
+  it from (the `fromURL` parameter of the
+  [jupyterlab-open-url-parameter](https://github.com/jupyterlab-contrib/jupyterlab-open-url-parameter)
+  extension), so the host must allow cross-origin requests from that site
+  too; GitHub and gists do.
 - HTML files in repositories and gists render as pages, as on nbviewer.org,
   but in a sandboxed iframe with its own (opaque) origin. Their stylesheets
   and scripts from the same repository are inlined, since
@@ -140,6 +148,7 @@ Environment variables read at build time:
 | --- | --- | --- |
 | `NBVIEWER_URL` | `https://nbviewer.org/` | Server-rendered nbviewer that pages and errors link to. Empty to disable. |
 | `BINDER_URL` | `https://mybinder.org/v2` | Binder for "Execute on Binder" links. Empty to disable. |
+| `JUPYTERLITE_URL` | `https://jupyter.org/try-jupyter/` | JupyterLite site for "Open in JupyterLab" and "Open in Jupyter Notebook" links; it needs the jupyterlab-open-url-parameter extension. Empty to disable. |
 
 ## License
 

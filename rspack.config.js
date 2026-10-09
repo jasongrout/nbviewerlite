@@ -8,7 +8,11 @@ const config = {
   // the server-rendered nbviewer, linked from every page as a fallback
   nbviewerUrl: process.env.NBVIEWER_URL ?? 'https://nbviewer.org/',
   // Binder, for "Execute on Binder" links
-  binderUrl: process.env.BINDER_URL ?? 'https://mybinder.org/v2'
+  binderUrl: process.env.BINDER_URL ?? 'https://mybinder.org/v2',
+  // a JupyterLite site with the jupyterlab-open-url-parameter extension (Try
+  // Jupyter has it), for "Open in JupyterLab" and "Open in Jupyter Notebook"
+  jupyterliteUrl:
+    process.env.JUPYTERLITE_URL ?? 'https://jupyter.org/try-jupyter/'
 };
 
 const requirejsVersion = require('requirejs/package.json').version;

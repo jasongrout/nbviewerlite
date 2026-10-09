@@ -9,6 +9,7 @@ import {
   expect,
   type GitHub,
   headerLinks,
+  jupyterliteLinks,
   links,
   markdown,
   notebook,
@@ -239,6 +240,7 @@ test.describe('notebooks', () => {
           'Execute on Binder',
           'https://mybinder.org/v2/gh/ipython/ipython/6.x?filepath=examples/IPython%20Kernel/Index.ipynb'
         ],
+        ...jupyterliteLinks(`${RAW}/examples/IPython%20Kernel/Index.ipynb`),
         ['View on nbviewer.org', `https://nbviewer.org${url}`],
         ['Download Notebook', `${RAW}/examples/IPython%20Kernel/Index.ipynb`]
       ])

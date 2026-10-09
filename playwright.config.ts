@@ -60,7 +60,8 @@ export default defineConfig({
     env: {
       PORT: String(port),
       NBVIEWER_URL: 'https://nbviewer.org/',
-      BINDER_URL: 'https://mybinder.org/v2'
+      BINDER_URL: 'https://mybinder.org/v2',
+      JUPYTERLITE_URL: 'https://jupyter.org/try-jupyter/'
     },
     // never test some other server (or an older build) on the same port
     reuseExistingServer: false,

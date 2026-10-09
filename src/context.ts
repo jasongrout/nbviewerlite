@@ -7,12 +7,18 @@ export interface IConfig {
   nbviewerUrl: string | null;
   /** Binder URL base, e.g. "https://mybinder.org/v2", or null for no link. */
   binderUrl: string | null;
+  /**
+   * JupyterLite site that opens notebooks from a fromURL parameter, e.g.
+   * "https://jupyter.org/try-jupyter/", or null for no links.
+   */
+  jupyterliteUrl: string | null;
 }
 
 export function readConfig(): IConfig {
   return {
     nbviewerUrl: BUILD_CONFIG.nbviewerUrl || null,
-    binderUrl: BUILD_CONFIG.binderUrl || null
+    binderUrl: BUILD_CONFIG.binderUrl || null,
+    jupyterliteUrl: BUILD_CONFIG.jupyterliteUrl || null
   };
 }
 

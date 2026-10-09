@@ -13,6 +13,7 @@ import {
   displayData,
   expect,
   headerLinks,
+  jupyterliteLinks,
   links,
   markdown,
   notebook,
@@ -155,6 +156,7 @@ test.describe('header links', () => {
     expect(await links(headerLinks(page))).toEqual([
       ['View as Slides', '/format/slides/urls/nb.example/deck.ipynb'],
       ['View as Code', '/format/script/urls/nb.example/deck.ipynb'],
+      ...jupyterliteLinks(`${BASE}/deck.ipynb`),
       ['View on nbviewer.org', `${nbviewer}/urls/nb.example/deck.ipynb`],
       ['Download Notebook', `${BASE}/deck.ipynb`]
     ]);
@@ -168,6 +170,7 @@ test.describe('header links', () => {
     await expect(page.getByRole('heading', { name: 'Analysis' })).toBeVisible();
     expect(await links(headerLinks(page))).toEqual([
       ['View as Code', '/format/script/urls/nb.example/analysis.ipynb'],
+      ...jupyterliteLinks(`${BASE}/analysis.ipynb`),
       ['View on nbviewer.org', `${nbviewer}/urls/nb.example/analysis.ipynb`],
       ['Download Notebook', `${BASE}/analysis.ipynb`]
     ]);
@@ -181,6 +184,7 @@ test.describe('header links', () => {
     expect(await links(headerLinks(page))).toEqual([
       ['View as Notebook', '/urls/nb.example/deck.ipynb'],
       ['View as Code', '/format/script/urls/nb.example/deck.ipynb'],
+      ...jupyterliteLinks(`${BASE}/deck.ipynb`),
       [
         'View on nbviewer.org',
         `${nbviewer}/format/slides/urls/nb.example/deck.ipynb`
@@ -205,6 +209,7 @@ test.describe('header links', () => {
     expect(found.slice(0, -1)).toEqual([
       ['View as Notebook', '/urls/nb.example/deck.ipynb'],
       ['View as Slides', '/format/slides/urls/nb.example/deck.ipynb'],
+      ...jupyterliteLinks(`${BASE}/deck.ipynb`),
       [
         'View on nbviewer.org',
         `${nbviewer}/format/script/urls/nb.example/deck.ipynb`
@@ -243,6 +248,7 @@ test.describe('format/script/', () => {
 
     expect(await links(headerLinks(page))).toEqual([
       ['View as Notebook', '/urls/nb.example/analysis.ipynb'],
+      ...jupyterliteLinks(`${BASE}/analysis.ipynb`),
       [
         'View on nbviewer.org',
         'https://nbviewer.org/format/script/urls/nb.example/analysis.ipynb'
@@ -458,6 +464,7 @@ test.describe('format/slides/', () => {
     expect(await links(headerLinks(page))).toEqual([
       ['View as Notebook', '/urls/nb.example/analysis.ipynb'],
       ['View as Code', '/format/script/urls/nb.example/analysis.ipynb'],
+      ...jupyterliteLinks(`${BASE}/analysis.ipynb`),
       [
         'View on nbviewer.org',
         'https://nbviewer.org/format/slides/urls/nb.example/analysis.ipynb'
@@ -606,6 +613,9 @@ test.describe('format URLs', () => {
         'Execute on Binder',
         'https://mybinder.org/v2/gh/u/r/main?filepath=docs/deck.ipynb'
       ],
+      ...jupyterliteLinks(
+        'https://raw.githubusercontent.com/u/r/main/docs/deck.ipynb'
+      ),
       [
         'View on nbviewer.org',
         'https://nbviewer.org/format/slides/github/u/r/blob/main/docs/deck.ipynb'

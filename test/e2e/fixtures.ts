@@ -628,6 +628,19 @@ export function headerLinks(page: Page): Locator {
 }
 
 /**
+ * The header's links to the notebook at `url` in JupyterLite (Try Jupyter's
+ * JupyterLab and Notebook apps).
+ */
+export function jupyterliteLinks(url: string): [string, string][] {
+  const query = new URLSearchParams({ fromURL: url });
+  const site = 'https://jupyter.org/try-jupyter';
+  return [
+    ['Open in JupyterLab', `${site}/lab/index.html?${query}`],
+    ['Open in Jupyter Notebook', `${site}/notebooks/index.html?${query}`]
+  ];
+}
+
+/**
  * Text and href of each link in `scope`, in order. Not retried: use it with
  * expect.poll, or once the page has settled.
  */

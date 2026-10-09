@@ -29,6 +29,23 @@ export interface INotebookSource extends IFileSource {
   executorUrl?: string | null;
 }
 
+/**
+ * Links that open the notebook in a JupyterLite site's JupyterLab and
+ * Notebook apps, which download it from `url` in the browser
+ * (jupyterlab-open-url-parameter's fromURL parameter), as this page did.
+ */
+function jupyterliteLinks(site: string, url: string): [string, string][] {
+  const base = site.replace(/\/?$/, '/');
+  return [
+    ['lab', 'JupyterLab'],
+    ['notebooks', 'Jupyter Notebook']
+  ].map(([app, name]) => {
+    const link = new URL(`${app}/index.html`, base);
+    link.searchParams.set('fromURL', url);
+    return [link.href, `Open in ${name}`];
+  });
+}
+
 export async function showNotebook(
   ctx: IContext,
   source: INotebookSource
@@ -63,6 +80,14 @@ export async function showNotebook(
   }
   if (source.executorUrl) {
     addHeaderLink(source.executorUrl, 'Execute on Binder', 'launch');
+  }
+  if (ctx.config.jupyterliteUrl) {
+    for (const [url, title] of jupyterliteLinks(
+      ctx.config.jupyterliteUrl,
+      source.url
+    )) {
+      addHeaderLink(url, title, 'launch');
+    }
   }
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');
