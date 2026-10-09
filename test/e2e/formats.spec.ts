@@ -11,7 +11,6 @@ import type { Locator, Page } from '@playwright/test';
 import {
   code,
   expect,
-  googleFonts,
   headerLinks,
   links,
   markdown,
@@ -139,7 +138,6 @@ test.beforeEach(({ web }) => {
   web.file(`${BASE}/deck.ipynb`, deck);
   web.file(`${BASE}/analysis.ipynb`, analysis);
   web.file(`${BASE}/stats.ipynb`, stats);
-  googleFonts(web);
 });
 
 test.describe('header links', () => {
@@ -338,6 +336,26 @@ test.describe('format/slides/', () => {
       page.getByRole('heading', { name: 'Deck title' })
     ).toBeVisible();
     await expect(slideNumber(page)).toHaveText('1 / 3');
+  });
+
+  test("headings in the theme's font, which comes with the site", async ({
+    page
+  }) => {
+    // A request to Google Fonts, where reveal.js's theme gets its fonts,
+    // would fail the test: it has no fixture.
+    await page.goto('/format/slides/urls/nb.example/deck.ipynb');
+    const heading = page.getByRole('heading', { name: 'Deck title' });
+    await expect(heading).toBeVisible();
+    await expect(heading).toHaveCSS('font-family', /^"News Cycle"/);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.fonts]
+            .filter(face => face.status === 'loaded')
+            .map(face => face.family)
+        )
+      )
+      .toContain('News Cycle');
   });
 
   test('the keys still change slides after a click in a code cell', async ({

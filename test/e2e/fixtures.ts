@@ -713,17 +713,6 @@ export function sidewaysScroll(page: Page): Promise<number> {
   );
 }
 
-/**
- * Google Fonts' stylesheets, empty: reveal.js's themes (format/slides/)
- * import their fonts from there, as nbconvert's slides do.
- */
-export function googleFonts(web: Web): void {
-  web.host('https://fonts.googleapis.com', () => ({
-    body: '',
-    contentType: 'text/css; charset=utf-8'
-  }));
-}
-
 // ---------------------------------------------------------------------------
 // Saved ipywidgets state
 // ---------------------------------------------------------------------------

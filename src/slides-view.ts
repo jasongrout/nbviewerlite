@@ -22,8 +22,16 @@ import { type ISlide, type ISlideCell, slideDeck } from './slides.ts';
 // after JupyterLab's styles (render.ts), which reveal.js's theme overrides
 // as in nbconvert's slides
 import 'reveal.js/reveal.css';
-import 'reveal.js/theme/simple.css';
+import './reveal-simple.css';
 import './slides-view.css';
+// The theme's fonts, from the site rather than Google Fonts. Every subset,
+// as Google Fonts serves them: the browser fetches only those the text uses.
+import '@fontsource/lato/400.css';
+import '@fontsource/lato/400-italic.css';
+import '@fontsource/lato/700.css';
+import '@fontsource/lato/700-italic.css';
+import '@fontsource/news-cycle/400.css';
+import '@fontsource/news-cycle/700.css';
 
 export async function showSlides(
   nb: nbformat.INotebookContent,
