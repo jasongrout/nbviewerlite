@@ -155,8 +155,7 @@ export function parseRoute(path: string): Route {
   }
   const route = parseBase(viewer.base);
   // only provider pages have formats, not the landing page or the FAQ
-  return (route.kind === 'home' || route.kind === 'faq') &&
-    viewer.base !== path
+  return (route.kind === 'home' || route.kind === 'faq') && viewer.base !== path
     ? { kind: 'notfound' }
     : route;
 }
