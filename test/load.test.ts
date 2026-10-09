@@ -66,6 +66,12 @@ test('parseNotebook reads nbformat 4 cells without an nbformat key', () => {
     parseNotebook(JSON.stringify(nb), 'a.ipynb'),
     normalizeNotebook(nb)
   );
+  // nothing that only nbformat 1 has: kept as it is, metadata and all
+  const bare = { ...nb, cells: [{ cell_type: 'code' }] };
+  assert.deepEqual(
+    parseNotebook(JSON.stringify(bare), 'a.ipynb'),
+    normalizeNotebook(bare)
+  );
 });
 
 test('parseNotebook rejects what is not a notebook', () => {
