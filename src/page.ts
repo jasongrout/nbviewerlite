@@ -65,10 +65,14 @@ export function showError(
   );
 }
 
-/** The landing page: paste a URL (or GitHub name, gist id), go to its view. */
+/**
+ * The landing page: paste a URL (or GitHub name, gist id), go to its view.
+ * `below` follows the form (the examples).
+ */
 export function showHome(
   root: HTMLElement,
-  toPath: (input: string) => string | null
+  toPath: (input: string) => string | null,
+  ...below: Node[]
 ): void {
   const input = h('input', {
     type: 'text',
@@ -109,7 +113,8 @@ export function showHome(
       ),
       form,
       message
-    )
+    ),
+    ...below
   );
   input.focus();
 }

@@ -18,6 +18,7 @@ import { showNotebook } from './notebook-view.ts';
 import { link, showError, showHome } from './page.ts';
 import { viewerPathForInput } from './rewrites.ts';
 import { fetchUrl, parseRoute, viewerPath } from './route.ts';
+import { showcase } from './showcase.ts';
 
 import './style.css';
 
@@ -75,10 +76,14 @@ async function main(): Promise<void> {
   const route = parseRoute(ctx.path);
   switch (route.kind) {
     case 'home':
-      showHome(root, input => {
-        const path = viewerPathForInput(input);
-        return path === null ? null : viewerUrl(path);
-      });
+      showHome(
+        root,
+        input => {
+          const path = viewerPathForInput(input);
+          return path === null ? null : viewerUrl(path);
+        },
+        showcase()
+      );
       return;
     case 'faq':
       return showFaqPage(root);

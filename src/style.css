@@ -105,6 +105,65 @@ a.nbv-link:hover {
   color: #b71c1c;
 }
 
+/* Examples on the landing page: cards like JupyterLab's launcher's */
+
+.nbv-showcase h2 {
+  margin: 32px 0 16px;
+  padding-bottom: 8px;
+  font-size: 18px;
+  font-weight: 500;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.nbv-showcase ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nbv-showcase a {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 2px;
+  box-shadow:
+    0 3px 1px -2px rgba(0, 0, 0, 0.2),
+    0 2px 2px 0 rgba(0, 0, 0, 0.14),
+    0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.2s;
+}
+
+.nbv-showcase a:hover,
+.nbv-showcase a:focus-visible {
+  box-shadow:
+    0 3px 5px -1px rgba(0, 0, 0, 0.2),
+    0 6px 10px 0 rgba(0, 0, 0, 0.14),
+    0 1px 18px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* nbviewer's thumbnails are all 16:10 */
+.nbv-showcase img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #fafafa;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.nbv-showcase span {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
 /* Breadcrumbs and listings */
 
 .nbv-breadcrumbs ol {
