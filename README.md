@@ -63,6 +63,10 @@ repository (Workers & Pages > Create > Import a repository), named
 deploy command `npx wrangler deploy`. Node.js comes from `.node-version`.
 To change the build settings below, add them as build variables.
 
+Pushes to the production branch deploy the site. Other branches get preview
+deployments: Workers Builds runs `npx wrangler preview` for them, which needs
+the (empty) `[previews]` block in `wrangler.toml`.
+
 To check a build the way Cloudflare serves it, with its local emulator:
 
 ```shell

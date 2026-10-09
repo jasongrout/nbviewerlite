@@ -9,3 +9,8 @@ compatibility_date = "2026-10-01"
 [assets]
 directory = "./dist"
 not_found_handling = "404-page"
+
+# Preview deployments: Workers Builds runs `npx wrangler preview` for
+# branches other than the production branch, which needs this block (it can
+# stay empty; the settings above apply).
+[previews]
