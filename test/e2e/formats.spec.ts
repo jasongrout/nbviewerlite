@@ -749,7 +749,8 @@ test.describe('links on format/slides/ pages', () => {
       `/format/slides${blob}/docs/report.html`
     );
     // nbviewer redirects directories to their listing without the format,
-    // and serves other files as they are; breadcrumbs leave it out too
+    // and serves other files as they are; breadcrumbs to directories leave
+    // it out too, but not the one to this page
     await expect(link(page, 'the docs')).toHaveAttribute(
       'href',
       '/github/u/r/tree/main/docs/'
@@ -758,9 +759,12 @@ test.describe('links on format/slides/ pages', () => {
       'href',
       `${blob}/data.csv`
     );
-    await expect(
-      page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link')
-    ).toHaveAttribute('href', '/github/u/r/tree/main/');
+    expect(
+      await links(page.getByRole('navigation', { name: 'Breadcrumb' }))
+    ).toEqual([
+      ['r', '/github/u/r/tree/main/'],
+      ['deck.ipynb', `/format/slides${blob}/deck.ipynb`]
+    ]);
 
     await link(page, 'next deck').click();
     await expect(page).toHaveURL(`/format/slides${blob}/part2.ipynb`);

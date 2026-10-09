@@ -38,6 +38,9 @@ Paths match nbviewer.org's, so changing the hostname is enough:
   link. The menu holds what nbviewer.org's header icons link to (the other
   formats, Binder, GitHub or the gist, nbviewer.org itself), and JupyterLab
   and Jupyter Notebook (below).
+- The bar above a notebook or HTML file shows the file's name, after links
+  to the directories above it in a GitHub repository. nbviewer.org shows the
+  name only for notebooks at the root of a repository.
 - Notebook pages link to the notebook in JupyterLab and in Jupyter Notebook
   on a [JupyterLite](https://jupyterlite.readthedocs.io/) site (by default
   [Try Jupyter](https://jupyter.org/try-jupyter/)), where it runs in the

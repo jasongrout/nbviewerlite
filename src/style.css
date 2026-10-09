@@ -232,6 +232,11 @@ a.nbv-link:hover {
   border-radius: 4px;
 }
 
+/* a name too long for the bar breaks rather than widen the page */
+.nbv-breadcrumbs li {
+  overflow-wrap: anywhere;
+}
+
 .nbv-breadcrumbs li + li::before {
   content: '/';
   padding: 0 8px;
@@ -242,6 +247,11 @@ a.nbv-link:hover {
 .nbv-table a {
   color: var(--jp-inverse-layout-color3);
   text-decoration: none;
+}
+
+/* the page itself, in the text's color: where the trail leads */
+.nbv-breadcrumbs a[aria-current='page'] {
+  color: inherit;
 }
 
 .nbv-breadcrumbs a:hover,

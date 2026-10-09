@@ -21,8 +21,6 @@ import { SourceResolver } from './resolver.ts';
 export interface INotebookSource extends IFileSource {
   /** Where the notebook lives; relative links and images resolve against it. */
   url: string;
-  /** Page title, usually the file name. */
-  title: string;
   /** Where relative links in the notebook go; gets absolute URLs. */
   linkFor: (absoluteUrl: string) => string;
   /** "View on ..." header link: [url, provider name]. */
@@ -109,7 +107,7 @@ export async function showNotebook(
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');
 
-  const crumbs = fileCrumbs(source);
+  const crumbs = fileCrumbs(ctx, source);
   if (nb.cells.length === 0) {
     root.replaceChildren(
       ...crumbs,

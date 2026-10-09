@@ -31,6 +31,15 @@ test('a notebook over http (url/)', async ({ page, web }) => {
   await page.goto('/url/nb.example/notebooks/xkcd.ipynb');
   await expect(page.getByRole('heading', { name: 'XKCD plots' })).toBeVisible();
   await expect(page).toHaveTitle('xkcd.ipynb - nbviewer lite');
+  // the file name above it, a link to this page
+  const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+  expect(await links(crumbs)).toEqual([
+    ['xkcd.ipynb', '/url/nb.example/notebooks/xkcd.ipynb']
+  ]);
+  await expect(crumbs.getByRole('link')).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
   await expect(page.getByText('1 + 1')).toBeVisible();
   await expect(page.getByText('2', { exact: true })).toBeVisible();
   // the kernel is a label, not a link
@@ -67,6 +76,23 @@ test('a notebook over https, with a query string (urls/)', async ({
   await expect(
     headerLinks(page).getByRole('link', { name: 'Download Notebook' })
   ).toHaveAttribute('href', 'https://nb.example/api/notebook?id=7&raw=1');
+});
+
+test('a long file name breaks rather than widen the page', async ({
+  page,
+  web
+}) => {
+  const name = `${'a_notebook_with_a_long_name_'.repeat(4)}.ipynb`;
+  web.file(`https://nb.example/${name}`, XKCD);
+  await page.setViewportSize({ width: 420, height: 800 });
+  await page.goto(`/urls/nb.example/${name}`);
+  await expect(page.getByRole('heading', { name: 'XKCD plots' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toHaveText(
+    name
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth)
+  ).toBeLessThanOrEqual(420);
 });
 
 test.describe('errors', () => {

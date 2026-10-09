@@ -250,16 +250,21 @@ test.describe('notebooks', () => {
         ['Download Notebook', `${RAW}/examples/IPython%20Kernel/Index.ipynb`]
       ])
     );
-    expect(
-      await links(page.getByRole('navigation', { name: 'Breadcrumb' }))
-    ).toEqual([
+    // then the notebook's own name, a link to this page
+    const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(await links(crumbs)).toEqual([
       ['ipython', '/github/ipython/ipython/tree/6.x/'],
       ['examples', '/github/ipython/ipython/tree/6.x/examples/'],
       [
         'IPython Kernel',
         '/github/ipython/ipython/tree/6.x/examples/IPython%20Kernel/'
-      ]
+      ],
+      ['Index.ipynb', url]
     ]);
+    await expect(crumbs.getByRole('link').last()).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
     expect(github.requests).toEqual([]);
   });
 

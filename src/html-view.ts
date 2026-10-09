@@ -26,7 +26,7 @@ import { addHeaderLink, addMenuLink, h, link, showStatus } from './page.ts';
 export interface IHtmlSource {
   /** The file's raw URL; relative URLs in it resolve against this. */
   url: string;
-  /** Page title, usually the file name. */
+  /** The file name: the page title, and the last breadcrumb. */
   title: string;
   /** The file's text. Defaults to fetching `url`. */
   load?: () => Promise<string>;
@@ -91,7 +91,7 @@ export async function showHtml(
     sandbox: SANDBOX,
     srcdoc
   });
-  root.replaceChildren(...fileCrumbs(source), frame);
+  root.replaceChildren(...fileCrumbs(ctx, source), frame);
 
   // As tall as the rest of the window: the frame can't size itself to its
   // content, which is cross-origin.
