@@ -5,7 +5,15 @@
 
 import type { Page } from '@playwright/test';
 
-import { expect, type GitHub, markdown, notebook, test } from './fixtures.ts';
+import {
+  code,
+  displayData,
+  expect,
+  type GitHub,
+  markdown,
+  notebook,
+  test
+} from './fixtures.ts';
 
 const GIST = '0123456789abcdef0123';
 
@@ -76,7 +84,10 @@ test.describe('headers', () => {
       const response = await request.get(path);
       expect(response.headers(), path).toMatchObject({
         'x-content-type-options': 'nosniff',
-        'referrer-policy': 'strict-origin-when-cross-origin'
+        'referrer-policy': 'strict-origin-when-cross-origin',
+        'permissions-policy': expect.stringContaining(
+          'camera=(), microphone=(), geolocation=()'
+        )
       });
     }
   });
@@ -84,6 +95,41 @@ test.describe('headers', () => {
   test('the files that set them are not served', async ({ request }) => {
     expect((await request.get('/_headers')).status()).toBe(404);
     expect((await request.get('/_redirects')).status()).toBe(404);
+  });
+
+  test.describe('with geolocation allowed for the site', () => {
+    test.use({
+      permissions: ['geolocation'],
+      geolocation: { latitude: 48.1, longitude: 11.6 }
+    });
+
+    test('notebooks still get no location, but can go fullscreen', async ({
+      page,
+      web
+    }) => {
+      web.file(
+        'https://nb.example/where.ipynb',
+        notebook([
+          code('where()', [
+            displayData({
+              'application/javascript':
+                'navigator.geolocation.getCurrentPosition(\n' +
+                '  () => (element.textContent = "located"),\n' +
+                '  error => (element.textContent = error.message)\n' +
+                ');'
+            })
+          ])
+        ])
+      );
+      await page.goto('/urls/nb.example/where.ipynb');
+      await expect(
+        page.getByText(
+          'Geolocation has been disabled in this document by permissions policy.'
+        )
+      ).toBeVisible();
+      // slides and some outputs use it
+      expect(await page.evaluate(() => document.fullscreenEnabled)).toBe(true);
+    });
   });
 });
 

@@ -1,3 +1,10 @@
+# Every response, the app's and the files'. Notebook code runs on the site's
+# origin (see "Trust and security" in PLAN.md), so a permission the visitor
+# grants for one notebook would hold for all of them: Permissions-Policy
+# turns off the powerful features notebooks have no business using. Not
+# fullscreen, which slides and some outputs use. Not bluetooth either: no
+# browser takes it as a policy yet, and Chrome warns about it on every page.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=(), midi=(), usb=(), serial=(), hid=(), payment=()

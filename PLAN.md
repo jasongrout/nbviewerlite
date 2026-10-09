@@ -53,7 +53,8 @@ repository by Workers Builds (`npm run build`, then `npx wrangler deploy`).
   without also matching `/favicon.ico`) still work, because the app redirects
   them to `/gist/{id}`.
 - Missing `/static/` files get `static/404.html` (status 404), not the app.
-- `_headers`: basic security headers. Hashed assets keep the default caching
+- `_headers`: basic security headers, and a `Permissions-Policy` (see Trust
+  and security). Hashed assets keep the default caching
   (revalidated with ETags): a year-long `immutable` header would also stick
   to whatever a missing asset path returned.
 - `wrangler.toml` names the Worker and its assets directory, and
@@ -144,6 +145,12 @@ secrets (no cookies, no tokens), so notebook code can't steal anything from
 it. Before anything secret lives on the origin (say, an optional GitHub token
 for higher rate limits), rendering must move into a sandboxed, opaque-origin
 iframe (phase 4).
+
+Browsers grant permissions per origin, so one that a visitor gives a
+notebook (their location, say) would hold for every notebook. `_headers`
+sends a `Permissions-Policy` that turns off camera, microphone,
+geolocation, screen capture, MIDI, USB, serial, HID and payment requests
+for the whole site; fullscreen stays on, for slides and outputs.
 
 ### Limits of fetching in the browser
 
