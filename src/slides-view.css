@@ -99,3 +99,28 @@ body.nbv-slides-page {
 .nbv-slides .jp-OutputPrompt {
   margin: 5px 5px 0 0;
 }
+
+/* reveal.js's rules for its progress bar (.reveal .progress) hide
+   ipywidgets' progress bars too: give them back their own styles. */
+
+.nbv-slides .reveal .widget-hprogress > .progress,
+.nbv-slides .reveal .widget-vprogress > .progress {
+  display: block;
+  z-index: auto;
+  background-color: var(--jp-layout-color2);
+}
+
+.nbv-slides .reveal .widget-hprogress > .progress::after,
+.nbv-slides .reveal .widget-vprogress > .progress::after {
+  content: none;
+}
+
+.nbv-slides .reveal .widget-hprogress > .progress {
+  width: auto;
+  height: auto;
+}
+
+.nbv-slides .reveal .widget-vprogress > .progress {
+  width: var(--jp-widgets-progress-thickness);
+  height: auto;
+}

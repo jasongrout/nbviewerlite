@@ -10,15 +10,18 @@ import type { Locator, Page } from '@playwright/test';
 
 import {
   code,
+  displayData,
   expect,
-  googleFonts,
   headerLinks,
   links,
   markdown,
   notebook,
   stream,
   test,
-  textColor
+  textColor,
+  widgetRef,
+  WidgetState,
+  widgetView
 } from './fixtures.ts';
 
 const BASE = 'https://nb.example';
@@ -139,7 +142,6 @@ test.beforeEach(({ web }) => {
   web.file(`${BASE}/deck.ipynb`, deck);
   web.file(`${BASE}/analysis.ipynb`, analysis);
   web.file(`${BASE}/stats.ipynb`, stats);
-  googleFonts(web);
 });
 
 test.describe('header links', () => {
@@ -340,6 +342,26 @@ test.describe('format/slides/', () => {
     await expect(slideNumber(page)).toHaveText('1 / 3');
   });
 
+  test("headings in the theme's font, which comes with the site", async ({
+    page
+  }) => {
+    // A request to Google Fonts, where reveal.js's theme gets its fonts,
+    // would fail the test: it has no fixture.
+    await page.goto('/format/slides/urls/nb.example/deck.ipynb');
+    const heading = page.getByRole('heading', { name: 'Deck title' });
+    await expect(heading).toBeVisible();
+    await expect(heading).toHaveCSS('font-family', /^"News Cycle"/);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.fonts]
+            .filter(face => face.status === 'loaded')
+            .map(face => face.family)
+        )
+      )
+      .toContain('News Cycle');
+  });
+
   test('the keys still change slides after a click in a code cell', async ({
     page
   }) => {
@@ -350,6 +372,57 @@ test.describe('format/slides/', () => {
     await page.getByText('print("printed")', { exact: true }).click();
     await page.keyboard.press('ArrowLeft');
     await expect(slideNumber(page)).toHaveText('1 / 3', { timeout: 3000 });
+  });
+
+  test('keys that widget controls use stay with them', async ({
+    page,
+    web
+  }) => {
+    const widgets = new WidgetState();
+    const slider = widgets.control(
+      'IntSlider',
+      { value: 3, max: 10, description: 'Level' },
+      'SliderStyle'
+    );
+    const dropdown = widgets.control(
+      'Dropdown',
+      {
+        _options_labels: ['one', 'two', 'three'],
+        index: 1,
+        description: 'Pick'
+      },
+      'DescriptionStyle'
+    );
+    web.file(
+      `${BASE}/controls.ipynb`,
+      notebook(
+        [
+          slide('slide', markdown('# Controls')),
+          code('slider', [widgetView(slider, 'IntSlider(value=3)')]),
+          code('dropdown', [widgetView(dropdown, 'Dropdown(index=1)')]),
+          slide('slide', markdown('# After the controls'))
+        ],
+        { ...PYTHON, ...widgets.metadata() }
+      )
+    );
+    await page.goto('/format/slides/urls/nb.example/controls.ipynb');
+    const level = page.getByRole('slider');
+    await expect(level).toHaveAttribute('aria-valuenow', '3.0');
+    const pick = page.getByRole('combobox', { name: 'Pick' });
+    await expect(pick).toHaveValue('two');
+
+    // the slider takes the arrow keys, and the dropdown too
+    await level.press('ArrowRight');
+    await expect(slideNumber(page)).toHaveText('1 / 2');
+    await expect(level).toHaveAttribute('aria-valuenow', '4.0');
+    await pick.press('ArrowDown');
+    await expect(pick).toHaveValue('three');
+    await expect(slideNumber(page)).toHaveText('1 / 2');
+
+    // elsewhere, they change slides
+    await page.getByRole('heading', { name: 'Controls' }).click();
+    await page.keyboard.press('ArrowRight');
+    await expect(slideNumber(page)).toHaveText('2 / 2');
   });
 
   test('speaker notes in the speaker view', async ({ page, context }) => {
@@ -391,6 +464,123 @@ test.describe('format/slides/', () => {
       ],
       ['Download Notebook', `${BASE}/analysis.ipynb`]
     ]);
+  });
+
+  /** A slide with a title, `output`, and another output below it. */
+  function tallSlide(
+    output: Record<string, unknown>,
+    metadata: Record<string, unknown> = {}
+  ) {
+    return notebook(
+      [
+        slide('slide', markdown('# Tall slide')),
+        code('show()', [output]),
+        code('print("last")', [stream('the last output\n')])
+      ],
+      { ...PYTHON, ...metadata }
+    );
+  }
+
+  const widgets = new WidgetState();
+  const tallSlider = widgets.control(
+    'IntSlider',
+    {
+      value: 3,
+      description: 'Tall',
+      layout: widgetRef(widgets.layout({ height: '400px' }))
+    },
+    'SliderStyle'
+  );
+  const lateOutputs = {
+    'a Vega-Lite chart': [
+      tallSlide(
+        displayData({
+          'application/vnd.vegalite.v5+json': {
+            $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+            data: { values: [{ a: 'A', b: 28 }] },
+            mark: 'bar',
+            encoding: {
+              x: { field: 'a', type: 'nominal' },
+              y: { field: 'b', type: 'quantitative' }
+            },
+            height: 300
+          },
+          'text/plain': 'alt.Chart(...)'
+        })
+      ),
+      '.vega-embed canvas'
+    ],
+    'a widget': [
+      tallSlide(
+        widgetView(tallSlider, 'IntSlider(value=3)'),
+        widgets.metadata()
+      ),
+      '.widget-slider'
+    ]
+  } as const;
+
+  for (const [what, [nb, rendered]] of Object.entries(lateOutputs)) {
+    test(`the whole slide shows once ${what} has rendered`, async ({
+      page,
+      web
+    }) => {
+      web.file(`${BASE}/tall.ipynb`, nb);
+      await page.goto('/format/slides/urls/nb.example/tall.ipynb');
+      await expect(page.locator(rendered)).toBeVisible();
+      // reveal.js centers each slide in the deck, and this one grew after
+      // the deck was laid out
+      const bottom = async (locator: Locator) => {
+        const box = await locator.boundingBox();
+        return box ? box.y + box.height : Number.NaN;
+      };
+      const deckBottom = await bottom(page.locator('.reveal'));
+      const last = page.getByText('the last output', { exact: true });
+      await expect.poll(() => bottom(last)).toBeLessThanOrEqual(deckBottom);
+    });
+  }
+
+  test('progress bar widgets show', async ({ page, web }) => {
+    // reveal.js's rules for its own progress bar match them too
+    const widgets = new WidgetState();
+    const progress = (name: string, state: Record<string, unknown>) =>
+      widgets.control(
+        name,
+        { ...state, _view_name: 'ProgressView' },
+        'ProgressStyle'
+      );
+    const across = progress('IntProgress', { value: 6, max: 10 });
+    const upright = progress('FloatProgress', {
+      value: 0.5,
+      max: 1,
+      orientation: 'vertical'
+    });
+    web.file(
+      `${BASE}/progress.ipynb`,
+      notebook(
+        [
+          slide('slide', markdown('# Progress')),
+          code('across', [widgetView(across, 'IntProgress(value=6)')]),
+          code('upright', [widgetView(upright, 'FloatProgress(value=0.5)')])
+        ],
+        { ...PYTHON, ...widgets.metadata() }
+      )
+    );
+    await page.goto('/format/slides/urls/nb.example/progress.ipynb');
+    for (const [orientation, size, filled] of [
+      ['h', 'width', 0.6],
+      ['v', 'height', 0.5]
+    ] as const) {
+      const track = page.locator(`.widget-${orientation}progress > .progress`);
+      const bar = track.locator('.progress-bar');
+      await expect(bar).toBeVisible();
+      // JupyterLab's colors, and the bar fills its share of the track
+      await expect(track).toHaveCSS('background-color', 'rgb(238, 238, 238)');
+      const trackBox = (await track.boundingBox())!;
+      const barBox = (await bar.boundingBox())!;
+      expect(trackBox.width).toBeGreaterThan(10);
+      expect(trackBox.height).toBeGreaterThan(10);
+      expect(barBox[size] / trackBox[size]).toBeCloseTo(filled, 2);
+    }
   });
 });
 

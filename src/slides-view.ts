@@ -22,8 +22,16 @@ import { type ISlide, type ISlideCell, slideDeck } from './slides.ts';
 // after JupyterLab's styles (render.ts), which reveal.js's theme overrides
 // as in nbconvert's slides
 import 'reveal.js/reveal.css';
-import 'reveal.js/theme/simple.css';
+import './reveal-simple.css';
 import './slides-view.css';
+// The theme's fonts, from the site rather than Google Fonts. Every subset,
+// as Google Fonts serves them: the browser fetches only those the text uses.
+import '@fontsource/lato/400.css';
+import '@fontsource/lato/400-italic.css';
+import '@fontsource/lato/700.css';
+import '@fontsource/lato/700-italic.css';
+import '@fontsource/news-cycle/400.css';
+import '@fontsource/news-cycle/700.css';
 
 export async function showSlides(
   nb: nbformat.INotebookContent,
@@ -61,7 +69,7 @@ export async function showSlides(
 
   slides.append(...deckElements(deck, nodes));
 
-  await new Reveal(reveal, {
+  const presentation = new Reveal(reveal, {
     embedded: true,
     hash: true,
     slideNumber: 'c/t',
@@ -72,8 +80,40 @@ export async function showSlides(
     mobileViewDistance: Infinity,
     // No switch to the scroll view on narrow screens: switching back
     // rebuilds the slides from their HTML, losing the outputs' state.
-    scrollActivationWidth: 0
-  }).initialize();
+    scrollActivationWidth: 0,
+    keyboardCondition: changesSlides
+  });
+  await presentation.initialize();
+
+  // reveal.js centers each slide by its height when it lays out the deck,
+  // which it does on navigation and window resizes. Outputs that render
+  // later (widgets, Vega, images) change that height: lay the deck out
+  // again, at most once a frame, or the bottom of the slide is cut off.
+  let frame = 0;
+  const observer = new ResizeObserver(() => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => presentation.layout());
+  });
+  for (const node of nodes) {
+    observer.observe(node);
+  }
+}
+
+/**
+ * Whether reveal.js acts on a key. It leaves out keys typed into text
+ * fields; keys that a widget control used (a slider's arrows) or that go to
+ * a dropdown stay with them too. Read-only code still lets the keys through,
+ * though CodeMirror moves its selection with them.
+ */
+function changesSlides(event: KeyboardEvent): boolean {
+  const target = event.target;
+  if (target instanceof HTMLSelectElement) {
+    return false;
+  }
+  return (
+    !event.defaultPrevented ||
+    (target instanceof Element && target.closest('.cm-editor') !== null)
+  );
 }
 
 /** The reveal template's sections, with the cells' nodes in them. */
