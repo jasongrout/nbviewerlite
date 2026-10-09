@@ -173,6 +173,13 @@ export async function showNotebook(
       await showScript(nb, root, crumbs, source.title);
       return;
     }
+    if (ctx.format === 'slides') {
+      const { showSlides } = await import(
+        /* webpackChunkName: "slides" */ './slides-view.ts'
+      );
+      await showSlides(nb, root, crumbs, resolver);
+      return;
+    }
     const { renderNotebook } = await import(
       /* webpackChunkName: "render" */ './render.ts'
     );

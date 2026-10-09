@@ -4,18 +4,22 @@
   (ScriptExporter, as nbviewer's format/script/ uses it), named with the
   extension nbconvert picks;
 - script/ipython2python.json: [cell, output] pairs from IPython's
-  TransformerManager, which nbconvert's ipython2python filter uses.
+  TransformerManager, which nbconvert's ipython2python filter uses;
+- slides.json: cells' slideshow metadata and the slides that nbconvert's
+  SlidesExporter makes of them, read back from its <section>s.
 
-Needs nbformat, nbconvert 7 and IPython 9:
+Needs nbformat, nbconvert 7, IPython 9 and beautifulsoup4:
 
     python test/fixtures/generate.py
 """
 import json
 import os
+import random
 
 import nbformat
+from bs4 import BeautifulSoup
 from IPython.core.inputtransformer2 import TransformerManager
-from nbconvert.exporters import ScriptExporter
+from nbconvert.exporters import ScriptExporter, SlidesExporter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 v4 = nbformat.v4
@@ -208,6 +212,78 @@ def write_ipython_cases(path):
         f.write('\n')
 
 
+TYPES = ['-', 'slide', 'subslide', 'fragment', 'notes', 'skip']
+
+
+def deck_from_html(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    slides_el = soup.select_one('div.slides')
+
+    def attrs(el):
+        return {k: v for k, v in el.attrs.items() if k.startswith('data-')}
+
+    def cell_index(el):
+        return int(el.get_text().strip()[1:])
+
+    def item(el):
+        if el.name == 'aside':
+            return {'index': cell_index(el), 'notes': True}
+        if 'fragment' in el.get('class', []):
+            return {'attributes': attrs(el), 'cells': [item(c) for c in children(el)]}
+        return {'index': cell_index(el), 'notes': False}
+
+    def children(el):
+        return [c for c in el.children if getattr(c, 'name', None)]
+
+    return [
+        {'attributes': attrs(s), 'subslides': [
+            {'attributes': attrs(sub), 'content': [item(c) for c in children(sub)]}
+            for sub in children(s)
+        ]}
+        for s in children(slides_el) if s.name == 'section'
+    ]
+
+
+def case(metadatas):
+    nb = v4.new_notebook()
+    nb.cells = [v4.new_markdown_cell(f'c{i}', metadata=m) for i, m in enumerate(metadatas)]
+    try:
+        html, _ = SlidesExporter().from_notebook_node(nb)
+        deck = deck_from_html(html)
+    except ValueError:
+        deck = None
+    return {'metadata': metadatas, 'deck': deck}
+
+
+def slideshow(t, data=None):
+    m = {'slideshow': {'slide_type': t}}
+    if data:
+        m['slideshow']['data'] = data
+    return m
+
+
+def write_slides_cases(path):
+    cases = [
+        case([slideshow('slide'), {}, slideshow('fragment'), {}, slideshow('fragment'),
+              slideshow('subslide'), slideshow('notes'), slideshow('skip'), {},
+              slideshow('slide'), slideshow('fragment'), slideshow('notes')]),
+        case([{}, {}, {}]),
+        case([slideshow('notes'), slideshow('skip'), {}, slideshow('subslide')]),
+        case([slideshow('notes'), slideshow('skip')]),
+        case([slideshow('fragment'), slideshow('fragment')]),
+        case([slideshow('slide', {'background_color': 'lightblue', 'transition': 'zoom'}),
+              slideshow('fragment', {'fragment_index': 2}), slideshow('subslide', {'state': 'x'})]),
+        case([{'slideshow': {}}, {'slideshow': {'slide_type': None}}, slideshow('slide')]),
+    ]
+    random.seed(1)
+    for _ in range(40):
+        cases.append(case([slideshow(random.choice(TYPES)) if random.random() < 0.8 else {}
+                           for _ in range(random.randint(1, 12))]))
+    with open(path, 'w') as f:
+        f.write('[\n' + ',\n'.join(json.dumps(c, separators=(',', ':')) for c in cases) + '\n]\n')
+
+
 if __name__ == '__main__':
     write_script_fixtures(os.path.join(HERE, 'script'))
     write_ipython_cases(os.path.join(HERE, 'script', 'ipython2python.json'))
+    write_slides_cases(os.path.join(HERE, 'slides.json'))
