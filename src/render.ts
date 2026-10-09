@@ -29,6 +29,8 @@ import vegaExtension from '@jupyterlab/vega5-extension';
 import { Widget } from '@lumino/widgets';
 
 import { javaScriptRendererFactory } from './javascript.ts';
+import { savedWidgetState, withoutMissingWidgetViews } from './widget-state.ts';
+import { widgetRendererFactory } from './widgets.ts';
 
 import '@jupyterlab/theme-light-extension/style/variables.css';
 import '@jupyterlab/notebook/style/index.js';
@@ -158,6 +160,12 @@ export function renderNotebook(
   for (const { rendererFactory, rank } of mimeExtensions) {
     rendermime.addFactory(rendererFactory, rank);
   }
+  // ipywidgets, from the state saved in the notebook; preferred over the
+  // other MIME types, as in JupyterLab and nbconvert.
+  const widgetState = savedWidgetState(nb.metadata);
+  if (widgetState) {
+    rendermime.addFactory(widgetRendererFactory(widgetState, rendermime), -10);
+  }
 
   const readOnly = { readOnly: true };
   const notebook = new StaticNotebook({
@@ -182,7 +190,7 @@ export function renderNotebook(
   // One undo manager for the document instead of one per cell: yjs warns
   // about the per-cell ones while cells are created from JSON.
   const model = new NotebookModel({ disableDocumentWideUndoRedo: false });
-  model.fromJSON(trustCells(nb));
+  model.fromJSON(trustCells(withoutMissingWidgetViews(nb, widgetState)));
   if (!model.getMetadata('language_info')?.name) {
     // Highlight code as Python when the notebook doesn't name its language
     // (nbformat 3 notebooks never do; the model then has an empty name), as
