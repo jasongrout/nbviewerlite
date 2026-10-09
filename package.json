@@ -17,22 +17,30 @@
     "test": "node --test --experimental-strip-types 'test/*.test.ts'"
   },
   "dependencies": {
+    "@jupyter-widgets/base": "^6.0.12",
+    "@jupyter-widgets/html-manager": "^1.0.15",
     "@jupyterlab/apputils": "~4.6.11",
     "@jupyterlab/cells": "~4.5.11",
     "@jupyterlab/codemirror": "~4.5.11",
+    "@jupyterlab/json-extension": "~4.5.11",
     "@jupyterlab/markedparser-extension": "~4.5.11",
     "@jupyterlab/mathjax-extension": "~4.5.11",
+    "@jupyterlab/mermaid": "~4.5.11",
     "@jupyterlab/nbformat": "~4.5.11",
     "@jupyterlab/notebook": "~4.5.11",
+    "@jupyterlab/pdf-extension": "~4.5.11",
     "@jupyterlab/rendermime": "~4.5.11",
     "@jupyterlab/rendermime-interfaces": "~3.13.11",
     "@jupyterlab/theme-light-extension": "~4.5.11",
     "@jupyterlab/ui-components": "~4.5.11",
+    "@jupyterlab/vega5-extension": "~4.5.11",
     "@lumino/widgets": "^2.7.5",
     "jquery": "^3.7.1",
-    "requirejs": "^2.3.8"
+    "requirejs": "^2.3.8",
+    "reveal.js": "^6.0.2"
   },
   "devDependencies": {
+    "@playwright/test": "~1.63.0",
     "@rspack/cli": "^1.7.12",
     "@rspack/core": "^1.7.12",
     "@types/jquery": "^3.5.34",
