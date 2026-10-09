@@ -50,7 +50,8 @@ on this site, as on nbviewer.org:
 - `/gist/{user}/{gist ID}` for a gist, and `/gist/{user}/` for a user's gists.
 
 To show a notebook as slides or as a script, put `/format/slides` or
-`/format/script` in front of its path. To link to a section of a notebook, add
+`/format/script` in front of its path. Links in it to other notebooks keep
+the format. To link to a section of a notebook, add
 `#` and the section's ID, which the ¶ link next to its heading has.
 
 ## Why can't nbviewer lite load a notebook from a URL?

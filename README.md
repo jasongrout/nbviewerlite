@@ -32,7 +32,8 @@ Paths match nbviewer.org's, so changing the hostname is enough:
 - Like nbviewer, every notebook URL also works under `/format/script/` (the
   notebook as nbconvert's script exporter writes it, with a download link)
   and `/format/slides/` (a reveal.js slideshow). Notebook pages link to the
-  formats that apply.
+  formats that apply, and their links to other notebooks stay in the format,
+  as on nbviewer.org.
 - HTML files in repositories and gists render as pages, as on nbviewer.org,
   but in a sandboxed iframe with its own (opaque) origin. Their stylesheets
   and scripts from the same repository are inlined, since
@@ -65,7 +66,9 @@ touch the network. Run `npx playwright install chromium` once, or set
 
 Some unit tests compare with reference outputs of Python's nbformat and
 nbconvert, stored in `test/fixtures/`; the commands that regenerate them are
-in the tests (`test/convert.test.ts`) and in `test/fixtures/generate.py`.
+in the tests (`test/convert.test.ts`) and in `test/fixtures/generate.py`,
+which needs Python 3.14, the version nbviewer.org runs: IPython's
+conversions depend on Python's tokenizer.
 
 ## Deployment
 

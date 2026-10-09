@@ -168,11 +168,15 @@ for the whole site; fullscreen stays on, for slides and outputs.
   listings cost one request, repo pages one more, gists one.
 - HTML files: raw.githubusercontent.com serves everything as `text/plain`
   with `nosniff`, so stylesheets and scripts from the same repository are
-  fetched and inlined (as data: URLs; at most 32 files and 10 MB per page).
-  Ones a page adds at run time with relative URLs (`document.write`,
-  RequireJS paths, module imports) don't load, nor do frames of other repo
-  files (raw.githubusercontent.com forbids framing). The frame has a fixed
-  height, the window below the header.
+  fetched and inlined as data: URLs. Per page: at most 32 files and 10 MB
+  fetched, 20 MB of data: URLs written (a file used twice counts twice),
+  and 64 nested `@import`s; what doesn't fit keeps its URL and doesn't load.
+  `javascript:` links and form actions (nbconvert's "toggle code" form, for
+  one) run in the frame, as on nbviewer.org. Stylesheets and scripts a page
+  adds at run time with relative URLs (`document.write`, RequireJS paths,
+  module imports) don't load, nor do frames of other repo files
+  (raw.githubusercontent.com forbids framing). The frame has a fixed height,
+  the window below the header.
 
 ## Phases
 
@@ -224,10 +228,14 @@ Same behavior as nbviewer's GitHub and gist providers:
   (`jp-MarkdownHeadingCollapsed`), which JupyterLab applies through its
   table of contents.
 - nbformat 1, 2 and 3 notebooks upgrade to nbformat 4 in the browser
-  (`src/convert.ts`): a port of Python nbformat's readers (`rejoin_lines`)
-  and upgrades, tested against nbformat's own output. Code in notebooks
-  that don't name their language (all nbformat 3 ones) is highlighted as
-  Python, like nbconvert's default lexer.
+  (`src/convert.ts`, chosen by `parseNotebook` in `src/load.ts`): a port of
+  Python nbformat's readers (`rejoin_lines`) and upgrades, tested against
+  nbformat's own output. nbformat 1 files have no `nbformat` key: Python
+  reads every notebook without one as nbformat 1, nbviewer lite only those
+  with nbformat 1's text and code cells, so nbformat 4 notebooks that lost
+  the key still render. Code in notebooks that don't name their language
+  (all nbformat 1 to 3 ones) is highlighted as Python, in the notebook and
+  in `format/script/`, like nbconvert's default lexer.
 - JupyterLab's other MIME renderers: JSON, PDF, Vega 5 and Vega-Lite 3 to 5,
   Mermaid (outputs and fenced blocks in Markdown), with JupyterLab's ranks.
   These differ from nbviewer.org, whose template shows fallbacks (text or an
@@ -242,7 +250,9 @@ Same behavior as nbviewer's GitHub and gist providers:
   show as usual, and notebook pages link to the formats that apply ("View
   as Slides" only with slide metadata).
   - Script: a port of nbconvert's ScriptExporter: the python template (with
-    IPython's transformations of magics, shell escapes and help) when
+    IPython's transformations of magics, shell escapes and help, as IPython
+    9 makes them on Python 3.14, nbviewer.org's version: the tokenizer is a
+    port of CPython 3.14's, f-strings and t-strings included) when
     `language_info.nbconvert_exporter` is `python`, otherwise the generic one
     with `language_info.file_extension`. Shown highlighted, with a download
     link: a page, where nbviewer.org answers with `text/plain`.
