@@ -31,33 +31,35 @@ over; the nbviewer server and its templates do not.
 
 ## Hosting
 
-Cloudflare Pages, connected to the GitHub repository: pushes to `main`
-deploy to production, other branches and pull requests get preview URLs.
-Pages serves `dist/`:
+Cloudflare Workers with static assets (no Worker code), built from the GitHub
+repository by Workers Builds (`npm run build`, then `npx wrangler deploy`).
+`wrangler.toml` serves `dist/`:
 
 - Files as themselves (`/static/...`, `/favicon.ico`).
 - Viewer URLs get the app with status 200, through rewrites in `_redirects`:
-  `/url/*`, `/urls/*`, `/github/*` and `/gist/*` to `/`. Status 200 makes
-  them rewrites, not redirects: the address bar and `location.pathname` keep
-  the original path, which the app then reads. Pages applies rules "regardless
-  of whether or not an asset matches the incoming request"
+  `/url/*`, `/urls/*`, `/github/*` and `/gist/*` to `/`. Status 200 makes them
+  rewrites, not redirects: the address bar and `location.pathname` keep the
+  original path, which the app then reads. Cloudflare applies rules
+  "regardless of whether or not an asset matches the incoming request"
   ([docs](https://developers.cloudflare.com/pages/configuration/redirects/)),
   which is fine because no files live under these prefixes; a catch-all `/*`
-  would also capture the assets (Pages rejects it as an infinite loop, as it
-  does any rule pointing at `/index.html`, hence `/`).
-- Every other unknown path gets `404.html`, which is the app too, with status
-  404: unknown URLs are real 404s, and nbviewer's old bare gist-id URLs
-  (`/{id}`, which no rule can match without also matching `/favicon.ico`)
-  still work, because the app redirects them to `/gist/{id}`.
+  would also capture the assets (Cloudflare rejects it as an infinite loop, as
+  it does any rule pointing at `/index.html`, hence `/`).
+- Every other unknown path gets `404.html` (`not_found_handling =
+  "404-page"`), which is the app too, with status 404: unknown URLs are real
+  404s, and nbviewer's old bare gist-id URLs (`/{id}`, which no rule can match
+  without also matching `/favicon.ico`) still work, because the app redirects
+  them to `/gist/{id}`.
 - Missing `/static/` files get `static/404.html` (status 404), not the app.
 - `_headers`: basic security headers. Hashed assets keep the default caching
   (revalidated with ETags): a year-long `immutable` header would also stick
   to whatever a missing asset path returned.
-- `wrangler.toml` names the project and its output directory, and
-  `.node-version` pins Node.js for the build.
+- `wrangler.toml` names the Worker and its assets directory, and
+  `.node-version` pins Node.js for the build. (Cloudflare Pages would serve
+  the same files the same way, with `pages_build_output_dir` instead.)
 
-Locally, `npm run preview` (a small Node server) and `npx wrangler pages dev
-dist` (Cloudflare's emulator) serve the build the same way. Netlify reads the
+Locally, `npm run preview` (a small Node server) and `npx wrangler dev`
+(Cloudflare's emulator) serve the build the same way. Netlify reads the
 same `_redirects` and `404.html`. Other hosts need the same rewrites, or at
 least `index.html` for every path that isn't a file (nginx `try_files $uri
 /index.html`). GitHub Pages can't rewrite; its `404.html` workaround answers
@@ -77,7 +79,7 @@ Consequences of being static:
 ## Architecture
 
 ```
-browser                                   static host (Cloudflare Pages)
+browser                                   static host (Cloudflare)
 -------                                   ----------------------------------
 GET /github/u/r/blob/main/a.ipynb  ---->  no such file: rewrite -> index.html (200)
 GET /static/js/main.<hash>.js      ---->  file
