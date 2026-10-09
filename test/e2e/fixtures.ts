@@ -872,3 +872,18 @@ export class WidgetState {
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Opening a notebook
+// ---------------------------------------------------------------------------
+
+/** Serve `nb` as https://nb.example/test.ipynb and open it in the viewer. */
+export async function open(
+  page: Page,
+  web: Web,
+  nb: object,
+  fragment = ''
+): Promise<void> {
+  web.file('https://nb.example/test.ipynb', nb);
+  await page.goto(`/urls/nb.example/test.ipynb${fragment}`);
+}

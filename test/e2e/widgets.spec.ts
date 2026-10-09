@@ -11,6 +11,7 @@ import {
   expect,
   markdown,
   notebook,
+  open,
   stream,
   test,
   type Web,
@@ -19,14 +20,7 @@ import {
   widgetView
 } from './fixtures.ts';
 
-const BASE = 'https://nb.example';
 const CDN = 'https://cdn.jsdelivr.net';
-
-/** Serve `nb` and open it. */
-async function open(page: Page, web: Web, nb: object) {
-  web.file(`${BASE}/widgets.ipynb`, nb);
-  await page.goto('/urls/nb.example/widgets.ipynb');
-}
 
 /** The control (slider, text box, ...) with this description. */
 function control(page: Page, description: string): Locator {

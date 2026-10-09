@@ -3,7 +3,7 @@
  * charts, JSON trees, PDFs and Mermaid diagrams.
  */
 
-import type { Locator, Page } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 
 import {
   code,
@@ -11,17 +11,11 @@ import {
   expect,
   markdown,
   notebook,
-  test,
-  type Web
+  open,
+  test
 } from './fixtures.ts';
 
 const BASE = 'https://nb.example';
-
-/** Serve `nb` and open it. */
-async function open(page: Page, web: Web, nb: object) {
-  web.file(`${BASE}/test.ipynb`, nb);
-  await page.goto('/urls/nb.example/test.ipynb');
-}
 
 /** How many of the canvas's pixels are about [r, g, b]. */
 function pixelsOf(canvas: Locator, [r, g, b]: number[]): Promise<number> {

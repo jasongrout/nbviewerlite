@@ -15,7 +15,8 @@ import { apiGet, GIST_URL, gistFileAnchor, gistFileName } from './github.ts';
 import { isHtmlFile } from './html.ts';
 import { showHtml } from './html-view.ts';
 import { iconLink, table } from './listing.ts';
-import { fetchText, showNotebook } from './notebook-view.ts';
+import { fetchText } from './load.ts';
+import { showNotebook } from './notebook-view.ts';
 import { addHeaderLink, h, showStatus } from './page.ts';
 import { gistPath } from './route.ts';
 

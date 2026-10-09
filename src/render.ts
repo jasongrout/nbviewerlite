@@ -5,7 +5,6 @@ import {
   CodeMirrorEditorFactory,
   CodeMirrorMimeTypeService,
   EditorExtensionRegistry,
-  EditorLanguageRegistry,
   EditorThemeRegistry,
   ybinding
 } from '@jupyterlab/codemirror';
@@ -30,6 +29,7 @@ import vegaExtension from '@jupyterlab/vega5-extension';
 import { Widget } from '@lumino/widgets';
 
 import { javaScriptRendererFactory } from './javascript.ts';
+import { codeLanguage, defaultLanguages } from './languages.ts';
 import { savedWidgetState, withoutMissingWidgetViews } from './widget-state.ts';
 import { widgetRendererFactory } from './widgets.ts';
 
@@ -68,10 +68,7 @@ const mermaidManager = new MermaidManager();
 RenderedMermaid.manager = mermaidManager;
 
 function createEditorServices() {
-  const languages = new EditorLanguageRegistry();
-  for (const language of EditorLanguageRegistry.getDefaultLanguages()) {
-    languages.addLanguage(language);
-  }
+  const languages = defaultLanguages();
 
   const themes = new EditorThemeRegistry();
   for (const theme of EditorThemeRegistry.getDefaultThemes()) {
@@ -203,15 +200,12 @@ export function renderNotebook(
   // about the per-cell ones while cells are created from JSON.
   const model = new NotebookModel({ disableDocumentWideUndoRedo: false });
   model.fromJSON(trustCells(withoutMissingWidgetViews(nb, widgetState)));
-  if (!model.getMetadata('language_info')?.name) {
-    // Highlight code as Python when the notebook doesn't name its language
-    // (nbformat 3 notebooks never do; the model then has an empty name), as
-    // nbconvert does: its default lexer is ipython3.
-    model.setMetadata('language_info', {
-      name: 'python',
-      codemirror_mode: { name: 'ipython', version: 3 }
-    });
-  }
+  // Python, for notebooks that don't name their language (the model then has
+  // an empty name)
+  model.setMetadata(
+    'language_info',
+    codeLanguage(model.getMetadata('language_info'))
+  );
   notebook.model = model;
   for (const cell of notebook.widgets) {
     cell.readOnly = true;
