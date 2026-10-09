@@ -56,7 +56,15 @@ module.exports = (env, argv) => ({
       { test: /\.(png|jpe?g|gif|woff2?|ttf|otf|eot)$/, type: 'asset/resource' },
       // JupyterLab imports SVG icons as strings from JS, and as URLs from CSS.
       { test: /\.svg$/, issuer: /\.[jt]s$/, type: 'asset/source' },
-      { test: /\.svg$/, issuer: /\.css$/, type: 'asset/inline' }
+      {
+        test: /\.svg$/,
+        issuer: /\.css$/,
+        // Font Awesome's SVG fonts (JupyterLab's and the widgets' icons) are
+        // big, and browsers use the woff2 ones: files like the other fonts.
+        exclude: /[\\/]webfonts[\\/]/,
+        type: 'asset/inline'
+      },
+      { test: /[\\/]webfonts[\\/].*\.svg$/, type: 'asset/resource' }
     ]
   },
   plugins: [
