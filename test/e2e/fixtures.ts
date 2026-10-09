@@ -687,3 +687,39 @@ export const test = base.extend<IFixtures>({
     { auto: true }
   ]
 });
+
+// ---------------------------------------------------------------------------
+// Helpers for the phase 3 specs (nbformat 3, formats, landing page and FAQ)
+
+/** An nbformat 3 notebook (IPython 1 and 2): one worksheet of `cells`. */
+export function v3Notebook(cells: Json[], metadata: Json = {}): Json {
+  return {
+    metadata: { name: '', ...metadata },
+    nbformat: 3,
+    nbformat_minor: 0,
+    worksheets: [{ metadata: {}, cells }]
+  };
+}
+
+/** The color `locator`'s text is drawn in, as the browser computed it. */
+export function textColor(locator: Locator): Promise<string> {
+  return locator.evaluate(element => getComputedStyle(element).color);
+}
+
+/** How far the page scrolls sideways; 0 or less if it fits the window. */
+export function sidewaysScroll(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth
+  );
+}
+
+/**
+ * Google Fonts' stylesheets, empty: reveal.js's themes (format/slides/)
+ * import their fonts from there, as nbconvert's slides do.
+ */
+export function googleFonts(web: Web): void {
+  web.host('https://fonts.googleapis.com', () => ({
+    body: '',
+    contentType: 'text/css; charset=utf-8'
+  }));
+}
