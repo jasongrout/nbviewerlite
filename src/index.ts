@@ -20,6 +20,7 @@ import { link, showError, showHome } from './page.ts';
 import { viewerPathForInput } from './rewrites.ts';
 import { fetchUrl, parseRoute, viewerPath } from './route.ts';
 import { showcase } from './showcase.ts';
+import { setUpTheme } from './theme.ts';
 
 import './style.css';
 
@@ -71,6 +72,7 @@ async function showFaqPage(root: HTMLElement): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  setUpTheme();
   const root = document.getElementById('nbviewer');
   if (!root) {
     return;

@@ -38,6 +38,7 @@
     "@jupyterlab/pdf-extension": "~4.5.11",
     "@jupyterlab/rendermime": "~4.5.11",
     "@jupyterlab/rendermime-interfaces": "~3.13.11",
+    "@jupyterlab/theme-dark-extension": "~4.5.11",
     "@jupyterlab/theme-light-extension": "~4.5.11",
     "@jupyterlab/ui-components": "~4.5.11",
     "@jupyterlab/vega5-extension": "~4.5.11",

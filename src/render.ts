@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import { Sanitizer } from '@jupyterlab/apputils';
+import { type IThemeManager, Sanitizer } from '@jupyterlab/apputils';
 import { MarkdownCell } from '@jupyterlab/cells';
 import {
   CodeMirrorEditorFactory,
@@ -30,10 +30,10 @@ import { Widget } from '@lumino/widgets';
 
 import { javaScriptRendererFactory } from './javascript.ts';
 import { codeLanguage, defaultLanguages } from './languages.ts';
+import { JUPYTERLAB_THEMES, onThemeChange, pageTheme } from './theme.ts';
 import { savedWidgetState, withoutMissingWidgetViews } from './widget-state.ts';
 import { widgetRendererFactory } from './widgets.ts';
 
-import '@jupyterlab/theme-light-extension/style/variables.css';
 import '@jupyterlab/notebook/style/index.js';
 import '@jupyterlab/mathjax-extension/style/index.js';
 import '@jupyterlab/json-extension/style/index.js';
@@ -62,9 +62,25 @@ const mimeExtensions: IRenderMime.IExtension[] = [
 ].flat();
 
 // One Mermaid manager for text/vnd.mermaid outputs and ```mermaid blocks in
-// markdown, as JupyterLab's mermaid-extension sets up. Without a theme
-// manager, it uses Mermaid's default (light) theme.
-const mermaidManager = new MermaidManager();
+// markdown, as JupyterLab's mermaid-extension sets up. Diagrams get
+// Mermaid's light or dark theme, as the page's (theme.ts) is when they
+// render, from what stands in for JupyterLab's theme manager here: the
+// members the Mermaid manager uses.
+const themeManager = {
+  get theme() {
+    return JUPYTERLAB_THEMES[pageTheme()];
+  },
+  isLight: (name: string) => name === JUPYTERLAB_THEMES.light,
+  themeChanged: {
+    connect: (slot: () => void, thisArg: unknown) => {
+      onThemeChange(() => slot.call(thisArg));
+      return true;
+    }
+  }
+};
+const mermaidManager = new MermaidManager({
+  themes: themeManager as unknown as IThemeManager
+});
 RenderedMermaid.manager = mermaidManager;
 
 function createEditorServices() {

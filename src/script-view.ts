@@ -13,7 +13,6 @@ import { codeLanguage, defaultLanguages } from './languages.ts';
 import { addHeaderLink, h } from './page.ts';
 import { notebookToScript, scriptFilename } from './script.ts';
 
-import '@jupyterlab/theme-light-extension/style/variables.css';
 import './script-view.css';
 
 export async function showScript(

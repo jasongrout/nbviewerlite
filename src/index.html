@@ -7,7 +7,22 @@
     <meta name="robots" content="noindex" />
     <title>nbviewer lite</title>
     <style>
-      /* Shell styles needed before the app's own CSS has loaded. */
+      /*
+       * Shell styles needed before the app's own CSS has loaded, with
+       * stand-ins for the JupyterLab theme variables they use, which load
+       * with the app (theme.ts).
+       */
+      :root {
+        --jp-layout-color0: white;
+        --jp-ui-font-color1: rgba(0, 0, 0, 0.87);
+        --jp-border-color2: #e0e0e0;
+      }
+      :root[data-nbv-theme='dark'] {
+        color-scheme: dark;
+        --jp-layout-color0: #111;
+        --jp-ui-font-color1: rgba(255, 255, 255, 0.87);
+        --jp-border-color2: #424242;
+      }
       body {
         margin: 0;
         font-family:
@@ -18,8 +33,8 @@
           Helvetica,
           Arial,
           sans-serif;
-        color: #212121;
-        background: #fff;
+        color: var(--jp-ui-font-color1);
+        background: var(--jp-layout-color0);
       }
       .nbv-header {
         display: flex;
@@ -27,7 +42,7 @@
         flex-wrap: wrap;
         gap: 8px 16px;
         padding: 8px 16px;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--jp-border-color2);
       }
       .nbv-brand {
         display: flex;
@@ -49,6 +64,22 @@
         box-sizing: border-box;
       }
     </style>
+    <script>
+      // The theme, chosen or else the system's, before the page first
+      // renders (theme.ts keeps it up to date)
+      {
+        let theme = null;
+        try {
+          theme = localStorage.getItem('nbv-theme');
+        } catch {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light';
+        }
+        document.documentElement.dataset.nbvTheme = theme;
+      }
+    </script>
     <script src="<%= requirejsUrl %>"></script>
   </head>
   <body>
@@ -57,7 +88,9 @@
         <%= jupyterLogo %>
         <span>nbviewer <span class="nbv-brand-lite">lite</span></span>
       </a>
-      <nav class="nbv-links" id="nbv-links" aria-label="Notebook links"></nav>
+      <div class="nbv-header-end">
+        <nav class="nbv-links" id="nbv-links" aria-label="Notebook links"></nav>
+      </div>
     </header>
     <main class="nbv-main" id="nbviewer">
       <div class="nbv-status">Loading&hellip;</div>
