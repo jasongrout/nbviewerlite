@@ -12,26 +12,15 @@ import {
   filler,
   markdown,
   notebook,
+  open,
   PNG,
   rawCell,
   stream,
   test,
-  topOf,
-  type Web
+  topOf
 } from './fixtures.ts';
 
 const BASE = 'https://nb.example';
-
-/** Serve `nb` and open it. */
-async function open(
-  page: import('@playwright/test').Page,
-  web: Web,
-  nb: object,
-  fragment = ''
-) {
-  web.file(`${BASE}/test.ipynb`, nb);
-  await page.goto(`/urls/nb.example/test.ipynb${fragment}`);
-}
 
 test('outputs, math and attachments', async ({ page, web }) => {
   await open(
