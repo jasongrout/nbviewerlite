@@ -4,6 +4,8 @@ declare const BUILD_CONFIG: {
   nbviewerUrl: string;
   /** Binder URL base, e.g. "https://mybinder.org/v2", or "". */
   binderUrl: string;
+  /** JupyterLite site, e.g. "https://jupyter.org/try-jupyter/", or "". */
+  jupyterliteUrl: string;
 };
 
 declare module '*.svg' {

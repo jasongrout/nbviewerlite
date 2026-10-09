@@ -34,6 +34,18 @@ Paths match nbviewer.org's, so changing the hostname is enough:
   and `/format/slides/` (a reveal.js slideshow). Notebook pages link to the
   formats that apply, and their links to other notebooks stay in the format,
   as on nbviewer.org.
+- The header shows the notebook's kernel, an "Open in…" menu and the download
+  link. The menu holds what nbviewer.org's header icons link to (the other
+  formats, Binder, GitHub or the gist, nbviewer.org itself), and JupyterLab
+  and Jupyter Notebook (below).
+- Notebook pages link to the notebook in JupyterLab and in Jupyter Notebook
+  on a [JupyterLite](https://jupyterlite.readthedocs.io/) site (by default
+  [Try Jupyter](https://jupyter.org/try-jupyter/)), where it runs in the
+  browser. JupyterLite downloads the notebook from the URL this site loaded
+  it from (the `fromURL` parameter of the
+  [jupyterlab-open-url-parameter](https://github.com/jupyterlab-contrib/jupyterlab-open-url-parameter)
+  extension), so the host must allow cross-origin requests from that site
+  too; GitHub and gists do.
 - HTML files in repositories and gists render as pages, as on nbviewer.org,
   but in a sandboxed iframe with its own (opaque) origin. Their stylesheets
   and scripts from the same repository are inlined, since
@@ -139,7 +151,8 @@ Environment variables read at build time:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NBVIEWER_URL` | `https://nbviewer.org/` | Server-rendered nbviewer that pages and errors link to. Empty to disable. |
-| `BINDER_URL` | `https://mybinder.org/v2` | Binder for "Execute on Binder" links. Empty to disable. |
+| `BINDER_URL` | `https://mybinder.org/v2` | Binder, for the "Open in…" menu's Binder links. Empty to disable. |
+| `JUPYTERLITE_URL` | `https://jupyter.org/try-jupyter/` | JupyterLite site, for the "Open in…" menu's JupyterLab and Jupyter Notebook links; it needs the jupyterlab-open-url-parameter extension. Empty to disable. |
 
 ## License
 

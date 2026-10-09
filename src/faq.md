@@ -100,10 +100,16 @@ outputs saved in the notebook file.
 [mybinder.org](https://mybinder.org/) is a separate web service that lets you
 open notebooks in an executable environment, making your code immediately
 reproducible by anyone, anywhere. For notebooks in GitHub repositories and in
-gists, nbviewer lite shows an _Execute on Binder_ button at the top of the
-page.
+gists, the _Open in…_ menu at the top of the page links to Binder.
 
-## Why does the Execute on Binder button lead to a Binder failure?
+[Try Jupyter](https://jupyter.org/try-jupyter/) runs JupyterLab and Jupyter
+Notebook in your browser, with [JupyterLite](https://jupyterlite.readthedocs.io/)
+kernels for Python and a few other languages. For every notebook, the _Open
+in…_ menu links to JupyterLab and Jupyter Notebook there, which open a copy of
+the notebook. Libraries that the notebook needs may not be available in the
+browser, and Try Jupyter keeps your changes in your browser's storage only.
+
+## Why does the Binder link lead to a Binder failure?
 
 Binder tries to build a Docker image containing the notebooks and requirements
 declared in a git repository. The build will fail if the repository has a
@@ -111,7 +117,7 @@ declared in a git repository. The build will fail if the repository has a
 suggest letting the repository owner know about the problem or submitting a
 pull request to help fix it.
 
-## Why does a notebook not run correctly after I click the Execute on Binder button?
+## Why does a notebook not run correctly after I click the Binder link?
 
 Binder builds a Docker image containing the notebooks in a git repository.
 Those notebooks may have requirements to run correctly such as libraries and

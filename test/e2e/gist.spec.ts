@@ -7,9 +7,11 @@ import {
   gistData,
   type GitHub,
   headerLinks,
+  jupyterliteLinks,
   links,
   markdown,
   notebook,
+  openInMenu,
   test
 } from './fixtures.ts';
 
@@ -66,10 +68,11 @@ test('a gist with several files lists them', async ({ page, github }) => {
     ['other.ipynb', `/gist/fperez/${GIST}/other.ipynb`],
     ['helper.py', `https://gist.github.com/fperez/${GIST}#file-helper-py`]
   ]);
+  await openInMenu(page);
   expect(await links(headerLinks(page))).toEqual([
-    ['View on Gist', `https://gist.github.com/${GIST}`],
-    ['Execute on Binder', `https://mybinder.org/v2/gist/fperez/${GIST}/master`],
-    ['View on nbviewer.org', `https://nbviewer.org/gist/fperez/${GIST}`]
+    ['Binder', `https://mybinder.org/v2/gist/fperez/${GIST}/master`],
+    ['Gist', `https://gist.github.com/${GIST}`],
+    ['nbviewer.org', `https://nbviewer.org/gist/fperez/${GIST}`]
   ]);
   expect(github.requests).toEqual([`/gists/${GIST}`]);
 });
@@ -81,15 +84,17 @@ test('a notebook in a gist', async ({ page, github, web }) => {
   await expect(page).toHaveTitle('analysis.ipynb - nbviewer lite');
   await expect(headerLinks(page)).toContainText('Python 3 Kernel');
   // among others (other formats of the notebook, say)
+  await openInMenu(page);
   expect(await links(headerLinks(page))).toEqual(
     expect.arrayContaining([
-      ['View on Gist', `https://gist.github.com/${GIST}`],
+      ...jupyterliteLinks(rawUrl(several, 'analysis.ipynb')),
       [
-        'Execute on Binder',
+        'Binder',
         `https://mybinder.org/v2/gist/fperez/${GIST}/master?filepath=analysis.ipynb`
       ],
+      ['Gist', `https://gist.github.com/${GIST}`],
       [
-        'View on nbviewer.org',
+        'nbviewer.org',
         `https://nbviewer.org/gist/fperez/${GIST}/analysis.ipynb`
       ],
       ['Download Notebook', rawUrl(several, 'analysis.ipynb')]
@@ -221,9 +226,10 @@ test("a user's gists that have notebooks, page by page", async ({
     ['single.ipynb', `/gist/fperez/${SINGLE}/single.ipynb`],
     ['next ›', '?page=2']
   ]);
+  await openInMenu(page);
   expect(await links(headerLinks(page))).toEqual([
-    ['View on Gist', 'https://gist.github.com/fperez'],
-    ['View on nbviewer.org', 'https://nbviewer.org/gist/fperez/']
+    ['Gist', 'https://gist.github.com/fperez'],
+    ['nbviewer.org', 'https://nbviewer.org/gist/fperez/']
   ]);
 
   await listing.getByRole('link', { name: 'next ›' }).click();

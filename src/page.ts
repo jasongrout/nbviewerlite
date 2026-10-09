@@ -24,8 +24,128 @@ export function link(href: string, text: string): HTMLElement {
 }
 
 /**
- * Add a link to the header's link bar (nbviewer's navbar icons), optionally
- * one that downloads a file with the given name.
+ * A button that shows `popup` below it. Another click on it, a click
+ * elsewhere, Escape, or tabbing out hides it. `onOpen` runs each time it
+ * opens.
+ */
+export function dropdown(
+  label: Child[],
+  popup: HTMLElement,
+  onOpen?: () => void
+): HTMLElement {
+  const toggle = h(
+    'button',
+    { type: 'button', class: 'nbv-menu-toggle', 'aria-expanded': 'false' },
+    ...label,
+    icon('caretDown')
+  );
+  popup.classList.add('nbv-menu-popup');
+  popup.hidden = true;
+  const container = h('div', { class: 'nbv-menu' }, toggle, popup);
+
+  const setOpen = (open: boolean) => {
+    popup.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) {
+      // from the button's left edge, or its right one if that fits better
+      popup.classList.remove('nbv-menu-popup-end');
+      popup.classList.toggle(
+        'nbv-menu-popup-end',
+        popup.getBoundingClientRect().right >
+          document.documentElement.clientWidth
+      );
+    }
+  };
+  toggle.addEventListener('click', () => {
+    const open = popup.hidden;
+    setOpen(open);
+    if (open) {
+      onOpen?.();
+    }
+  });
+  document.addEventListener('click', event => {
+    if (!container.contains(event.target as Node)) {
+      setOpen(false);
+    }
+  });
+  // Focus moving to another element: clicks elsewhere move it to nothing
+  // (or, in Safari, a click on the button moves it out of the popup).
+  container.addEventListener('focusout', event => {
+    const next = event.relatedTarget;
+    if (next instanceof Node && !container.contains(next)) {
+      setOpen(false);
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !popup.hidden) {
+      // not for the page too (reveal.js's slide overview)
+      event.preventDefault();
+      const focused = container.contains(document.activeElement);
+      setOpen(false);
+      if (focused) {
+        toggle.focus();
+      }
+    }
+  });
+  return container;
+}
+
+/** The groups of the header's "Open in…" menu, in their order. */
+const MENU_GROUPS = ['View as', 'Run in', 'View on'] as const;
+export type MenuGroup = (typeof MENU_GROUPS)[number];
+
+/**
+ * Add a link to the header's "Open in…" menu (nbviewer's navbar icons for
+ * the other formats and other sites), under the heading `group`, which
+ * `name` completes: "View on" "GitHub". `title` is its tooltip.
+ */
+export function addMenuLink(
+  group: MenuGroup,
+  href: string,
+  name: string,
+  iconName: IconName,
+  title = `${group} ${name}`
+): void {
+  const bar = document.getElementById('nbv-links');
+  if (!bar) {
+    return;
+  }
+  let menu = bar.querySelector('.nbv-open-menu');
+  if (!menu) {
+    menu = h('div', { class: 'nbv-open-menu' });
+    bar.append(dropdown(['Open in…'], menu as HTMLElement));
+  }
+  const index = MENU_GROUPS.indexOf(group);
+  let list = menu.querySelector(`[data-group="${index}"] ul`);
+  if (!list) {
+    const heading = `nbv-open-menu-${index}`;
+    list = h('ul', { 'aria-labelledby': heading });
+    const next = [...menu.children].find(
+      section => Number((section as HTMLElement).dataset.group) > index
+    );
+    menu.insertBefore(
+      h(
+        'div',
+        { class: 'nbv-menu-group', 'data-group': String(index) },
+        h('div', { class: 'nbv-menu-heading', id: heading }, group),
+        list
+      ),
+      next ?? null
+    );
+  }
+  list.append(
+    h(
+      'li',
+      {},
+      h('a', { class: 'nbv-link', href, title }, icon(iconName), name)
+    )
+  );
+}
+
+/**
+ * Add an item to the end of the header's link bar (where the "Open in…"
+ * menu also goes, with its first link): a label (`href` null) or a link,
+ * optionally one that downloads a file with the given name.
  */
 export function addHeaderLink(
   href: string | null,

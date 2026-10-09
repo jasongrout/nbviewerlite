@@ -13,9 +13,11 @@ import {
   displayData,
   expect,
   headerLinks,
+  jupyterliteLinks,
   links,
   markdown,
   notebook,
+  openInMenu,
   stream,
   test,
   textColor,
@@ -147,28 +149,68 @@ test.beforeEach(({ web }) => {
 test.describe('header links', () => {
   const nbviewer = 'https://nbviewer.org';
 
-  test('the notebook view links to slides and code', async ({ page }) => {
+  test('the kernel, the "Open in…" menu, the download link', async ({
+    page
+  }) => {
     await page.goto('/urls/nb.example/deck.ipynb');
     await expect(
       page.getByRole('heading', { name: 'Deck title' })
     ).toBeVisible();
-    expect(await links(headerLinks(page))).toEqual([
-      ['View as Slides', '/format/slides/urls/nb.example/deck.ipynb'],
-      ['View as Code', '/format/script/urls/nb.example/deck.ipynb'],
-      ['View on nbviewer.org', `${nbviewer}/urls/nb.example/deck.ipynb`],
+    const header = headerLinks(page);
+    await expect(header).toHaveText(
+      /^Python 3 \(ipykernel\) Kernel\s*Open in…\s*Download Notebook$/,
+      { useInnerText: true }
+    );
+    const toggle = header.getByRole('button', { name: 'Open in…' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(await links(header)).toEqual([
       ['Download Notebook', `${BASE}/deck.ipynb`]
     ]);
-    await expect(headerLinks(page)).toContainText(
-      'Python 3 (ipykernel) Kernel'
+
+    // groups, under headings that the links' names complete
+    const menu = await openInMenu(page);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const group = (name: string) => menu.getByRole('list', { name });
+    expect(await links(group('View as'))).toEqual([
+      ['Slides', '/format/slides/urls/nb.example/deck.ipynb'],
+      ['Code', '/format/script/urls/nb.example/deck.ipynb']
+    ]);
+    expect(await links(group('Run in'))).toEqual(
+      jupyterliteLinks(`${BASE}/deck.ipynb`)
     );
+    expect(await links(group('View on'))).toEqual([
+      ['nbviewer.org', `${nbviewer}/urls/nb.example/deck.ipynb`]
+    ]);
+    await expect(menu.getByRole('link', { name: 'Slides' })).toHaveAttribute(
+      'title',
+      'View as Slides'
+    );
+
+    // closes on Escape, back to the button; on a click elsewhere; when
+    // focus moves out
+    await menu.getByRole('link', { name: 'Code' }).focus();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(toggle).toBeFocused();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(menu).toBeVisible();
+    await page.getByRole('heading', { name: 'Deck title' }).click();
+    await expect(menu).toBeHidden();
+    await toggle.click();
+    await menu.getByRole('link', { name: 'nbviewer.org' }).focus();
+    await page.keyboard.press('Tab');
+    await expect(menu).toBeHidden();
   });
 
   test('no "View as Slides" without slide metadata', async ({ page }) => {
     await page.goto('/urls/nb.example/analysis.ipynb');
     await expect(page.getByRole('heading', { name: 'Analysis' })).toBeVisible();
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View as Code', '/format/script/urls/nb.example/analysis.ipynb'],
-      ['View on nbviewer.org', `${nbviewer}/urls/nb.example/analysis.ipynb`],
+      ['Code', '/format/script/urls/nb.example/analysis.ipynb'],
+      ...jupyterliteLinks(`${BASE}/analysis.ipynb`),
+      ['nbviewer.org', `${nbviewer}/urls/nb.example/analysis.ipynb`],
       ['Download Notebook', `${BASE}/analysis.ipynb`]
     ]);
   });
@@ -178,17 +220,21 @@ test.describe('header links', () => {
     await expect(
       page.getByRole('heading', { name: 'Deck title' })
     ).toBeVisible();
+    const menu = await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View as Notebook', '/urls/nb.example/deck.ipynb'],
-      ['View as Code', '/format/script/urls/nb.example/deck.ipynb'],
-      [
-        'View on nbviewer.org',
-        `${nbviewer}/format/slides/urls/nb.example/deck.ipynb`
-      ],
+      ['Notebook', '/urls/nb.example/deck.ipynb'],
+      ['Code', '/format/script/urls/nb.example/deck.ipynb'],
+      ...jupyterliteLinks(`${BASE}/deck.ipynb`),
+      ['nbviewer.org', `${nbviewer}/format/slides/urls/nb.example/deck.ipynb`],
       ['Download Notebook', `${BASE}/deck.ipynb`]
     ]);
+    // Escape closes the menu, without opening the slide overview
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(page.locator('.reveal')).not.toHaveClass(/\boverview\b/);
 
-    await page.getByRole('link', { name: 'View as Notebook' }).click();
+    await openInMenu(page);
+    await menu.getByRole('link', { name: 'Notebook', exact: true }).click();
     await expect(page).toHaveURL('/urls/nb.example/deck.ipynb');
     await expect(
       page.getByRole('heading', { name: 'Deck title' })
@@ -201,19 +247,18 @@ test.describe('header links', () => {
   test('the script view links to the notebook and slides', async ({ page }) => {
     await page.goto('/format/script/urls/nb.example/deck.ipynb');
     await expect(page.getByText('# # Deck title')).toBeVisible();
+    const menu = await openInMenu(page);
     const found = await links(headerLinks(page));
     expect(found.slice(0, -1)).toEqual([
-      ['View as Notebook', '/urls/nb.example/deck.ipynb'],
-      ['View as Slides', '/format/slides/urls/nb.example/deck.ipynb'],
-      [
-        'View on nbviewer.org',
-        `${nbviewer}/format/script/urls/nb.example/deck.ipynb`
-      ],
+      ['Notebook', '/urls/nb.example/deck.ipynb'],
+      ['Slides', '/format/slides/urls/nb.example/deck.ipynb'],
+      ...jupyterliteLinks(`${BASE}/deck.ipynb`),
+      ['nbviewer.org', `${nbviewer}/format/script/urls/nb.example/deck.ipynb`],
       ['Download Notebook', `${BASE}/deck.ipynb`]
     ]);
     expect(found.at(-1)?.[0]).toBe('Download Script');
 
-    await page.getByRole('link', { name: 'View as Slides' }).click();
+    await menu.getByRole('link', { name: 'Slides' }).click();
     await expect(page).toHaveURL('/format/slides/urls/nb.example/deck.ipynb');
     await expect(
       page.getByRole('heading', { name: 'Deck title' })
@@ -241,10 +286,12 @@ test.describe('format/script/', () => {
     await expect(keyword).toBeVisible();
     expect(await textColor(keyword)).not.toBe(await textColor(script));
 
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View as Notebook', '/urls/nb.example/analysis.ipynb'],
+      ['Notebook', '/urls/nb.example/analysis.ipynb'],
+      ...jupyterliteLinks(`${BASE}/analysis.ipynb`),
       [
-        'View on nbviewer.org',
+        'nbviewer.org',
         'https://nbviewer.org/format/script/urls/nb.example/analysis.ipynb'
       ],
       ['Download Notebook', `${BASE}/analysis.ipynb`],
@@ -455,11 +502,13 @@ test.describe('format/slides/', () => {
     await expect(current.getByText('echo "hi"')).toBeAttached();
     await page.keyboard.press('ArrowRight');
     await expect(slideNumber(page)).toHaveText('1 / 1');
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View as Notebook', '/urls/nb.example/analysis.ipynb'],
-      ['View as Code', '/format/script/urls/nb.example/analysis.ipynb'],
+      ['Notebook', '/urls/nb.example/analysis.ipynb'],
+      ['Code', '/format/script/urls/nb.example/analysis.ipynb'],
+      ...jupyterliteLinks(`${BASE}/analysis.ipynb`),
       [
-        'View on nbviewer.org',
+        'nbviewer.org',
         'https://nbviewer.org/format/slides/urls/nb.example/analysis.ipynb'
       ],
       ['Download Notebook', `${BASE}/analysis.ipynb`]
@@ -598,16 +647,20 @@ test.describe('format URLs', () => {
     ).toBeVisible();
     await expect(page.locator('.reveal .slide-number')).toHaveText('1 / 3');
     // the provider's links, and the same format on nbviewer.org
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View as Notebook', '/github/u/r/blob/main/docs/deck.ipynb'],
-      ['View as Code', '/format/script/github/u/r/blob/main/docs/deck.ipynb'],
-      ['View on GitHub', 'https://github.com/u/r/blob/main/docs/deck.ipynb'],
+      ['Notebook', '/github/u/r/blob/main/docs/deck.ipynb'],
+      ['Code', '/format/script/github/u/r/blob/main/docs/deck.ipynb'],
+      ...jupyterliteLinks(
+        'https://raw.githubusercontent.com/u/r/main/docs/deck.ipynb'
+      ),
       [
-        'Execute on Binder',
+        'Binder',
         'https://mybinder.org/v2/gh/u/r/main?filepath=docs/deck.ipynb'
       ],
+      ['GitHub', 'https://github.com/u/r/blob/main/docs/deck.ipynb'],
       [
-        'View on nbviewer.org',
+        'nbviewer.org',
         'https://nbviewer.org/format/slides/github/u/r/blob/main/docs/deck.ipynb'
       ],
       [
@@ -631,8 +684,9 @@ test.describe('format URLs', () => {
     await page.goto(`/format/script/gist/${id}`);
     await expect(page).toHaveURL(`/format/script/gist/fperez/${id}`);
     await expect(page.getByText('# # Deck title')).toBeVisible();
+    const menu = await openInMenu(page);
     await expect(
-      page.getByRole('link', { name: 'View on nbviewer.org' })
+      menu.getByRole('link', { name: 'nbviewer.org' })
     ).toHaveAttribute(
       'href',
       `https://nbviewer.org/format/script/gist/fperez/${id}`

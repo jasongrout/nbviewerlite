@@ -1,5 +1,5 @@
 import { keepsFormat } from './formats.ts';
-import { addHeaderLink, link, showError } from './page.ts';
+import { addMenuLink, link, showError } from './page.ts';
 import { type Format, splitFormat } from './route.ts';
 
 export interface IConfig {
@@ -7,12 +7,18 @@ export interface IConfig {
   nbviewerUrl: string | null;
   /** Binder URL base, e.g. "https://mybinder.org/v2", or null for no link. */
   binderUrl: string | null;
+  /**
+   * JupyterLite site that opens notebooks from a fromURL parameter, e.g.
+   * "https://jupyter.org/try-jupyter/", or null for no links.
+   */
+  jupyterliteUrl: string | null;
 }
 
 export function readConfig(): IConfig {
   return {
     nbviewerUrl: BUILD_CONFIG.nbviewerUrl || null,
-    binderUrl: BUILD_CONFIG.binderUrl || null
+    binderUrl: BUILD_CONFIG.binderUrl || null,
+    jupyterliteUrl: BUILD_CONFIG.jupyterliteUrl || null
   };
 }
 
@@ -78,12 +84,13 @@ export function redirect(path: string): void {
   );
 }
 
-/** Header link to the same page on the server-rendered nbviewer. */
+/** "Open in…" menu link to the same page on the server-rendered nbviewer. */
 export function addNbviewerLink(ctx: IContext): void {
   if (ctx.nbviewerPage) {
-    addHeaderLink(
+    addMenuLink(
+      'View on',
       ctx.nbviewerPage.url,
-      `View on ${ctx.nbviewerPage.label}`,
+      ctx.nbviewerPage.label,
       'launch'
     );
   }

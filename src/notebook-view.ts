@@ -10,6 +10,7 @@ import { formatLinks } from './formats.ts';
 import { parseNotebook } from './load.ts';
 import {
   addHeaderLink,
+  addMenuLink,
   h,
   link,
   scrollToFragment,
@@ -27,6 +28,24 @@ export interface INotebookSource extends IFileSource {
   /** "View on ..." header link: [url, provider name]. */
   provider?: [string, string];
   executorUrl?: string | null;
+}
+
+/**
+ * Links that open the notebook in a JupyterLite site's JupyterLab and
+ * Notebook apps, which download it from `url` in the browser
+ * (jupyterlab-open-url-parameter's fromURL parameter), as this page did:
+ * [url, app name].
+ */
+function jupyterliteLinks(site: string, url: string): [string, string][] {
+  const base = site.replace(/\/?$/, '/');
+  return [
+    ['lab', 'JupyterLab'],
+    ['notebooks', 'Jupyter Notebook']
+  ].map(([app, name]) => {
+    const link = new URL(`${app}/index.html`, base);
+    link.searchParams.set('fromURL', url);
+    return [link.href, name];
+  });
 }
 
 export async function showNotebook(
@@ -48,21 +67,44 @@ export async function showNotebook(
     return;
   }
 
-  // Header links, in nbviewer's order.
-  const otherFormats = formatLinks(nb, ctx.format, ctx.formatBase);
-  for (const { path, title, icon } of otherFormats) {
-    addHeaderLink(viewerUrl(path), title, icon);
-  }
+  // Header: the kernel, the "Open in…" menu, the download link.
   const kernel = nb.metadata?.kernelspec?.display_name;
   if (kernel) {
     addHeaderLink(null, `${kernel} Kernel`, 'kernel');
   }
-  if (source.provider) {
-    const [url, name] = source.provider;
-    addHeaderLink(url, `View on ${name}`, 'launch');
+  for (const { path, name, icon } of formatLinks(
+    nb,
+    ctx.format,
+    ctx.formatBase
+  )) {
+    addMenuLink('View as', viewerUrl(path), name, icon);
+  }
+  if (ctx.config.jupyterliteUrl) {
+    for (const [url, name] of jupyterliteLinks(
+      ctx.config.jupyterliteUrl,
+      source.url
+    )) {
+      addMenuLink(
+        'Run in',
+        url,
+        name,
+        'launch',
+        `Run in ${name}, in your browser (JupyterLite)`
+      );
+    }
   }
   if (source.executorUrl) {
-    addHeaderLink(source.executorUrl, 'Execute on Binder', 'launch');
+    addMenuLink(
+      'Run in',
+      source.executorUrl,
+      'Binder',
+      'launch',
+      'Execute on Binder'
+    );
+  }
+  if (source.provider) {
+    const [url, name] = source.provider;
+    addMenuLink('View on', url, name, 'launch');
   }
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');

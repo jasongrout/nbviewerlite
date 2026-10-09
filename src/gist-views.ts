@@ -18,7 +18,7 @@ import { showHtml } from './html-view.ts';
 import { iconLink, table } from './listing.ts';
 import { fetchText } from './load.ts';
 import { showNotebook } from './notebook-view.ts';
-import { addHeaderLink, h, showStatus } from './page.ts';
+import { addMenuLink, h, showStatus } from './page.ts';
 import { gistPath } from './route.ts';
 
 interface IGistFile {
@@ -140,11 +140,11 @@ export async function showGist(
 }
 
 function showGistFiles(ctx: IContext, user: string, gist: IGist): void {
-  addHeaderLink(gist.html_url, 'View on Gist', 'launch');
   const executorUrl = binderUrl(ctx, user, gist.id);
   if (executorUrl) {
-    addHeaderLink(executorUrl, 'Execute on Binder', 'launch');
+    addMenuLink('Run in', executorUrl, 'Binder', 'launch', 'Execute on Binder');
   }
+  addMenuLink('View on', gist.html_url, 'Gist', 'launch');
   addNbviewerLink(ctx);
 
   // notebooks first, then the other files, which link to the gist page
@@ -195,7 +195,7 @@ export async function showGistUser(ctx: IContext, user: string): Promise<void> {
     ]);
     return;
   }
-  addHeaderLink(GIST_URL + encodeURIComponent(user), 'View on Gist', 'launch');
+  addMenuLink('View on', GIST_URL + encodeURIComponent(user), 'Gist', 'launch');
   addNbviewerLink(ctx);
 
   const rows = response.data

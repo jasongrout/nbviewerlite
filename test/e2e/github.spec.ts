@@ -9,9 +9,11 @@ import {
   expect,
   type GitHub,
   headerLinks,
+  jupyterliteLinks,
   links,
   markdown,
   notebook,
+  openInMenu,
   PNG,
   startingWith,
   SUBMODULE,
@@ -95,13 +97,14 @@ test.describe('directory listings', () => {
       ['examples', `${tree}/`],
       ['IPython Kernel', `${tree}/IPython%20Kernel/`]
     ]);
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
+      ['Binder', 'https://mybinder.org/v2/gh/ipython/ipython/6.x'],
       [
-        'View on GitHub',
+        'GitHub',
         'https://github.com/ipython/ipython/tree/6.x/examples/IPython%20Kernel'
       ],
-      ['Execute on Binder', 'https://mybinder.org/v2/gh/ipython/ipython/6.x'],
-      ['View on nbviewer.org', `https://nbviewer.org${url}`]
+      ['nbviewer.org', `https://nbviewer.org${url}`]
     ]);
     expect(github.requests).toEqual([
       `/repos/ipython/ipython/contents/${KERNEL}?ref=6.x`
@@ -184,9 +187,11 @@ test.describe('directory listings', () => {
       'href',
       '/github/newowner/newname/tree/main/docs/'
     );
-    await expect(
-      headerLinks(page).getByRole('link', { name: 'View on GitHub' })
-    ).toHaveAttribute('href', 'https://github.com/newowner/newname/tree/main');
+    const menu = await openInMenu(page);
+    await expect(menu.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/newowner/newname/tree/main'
+    );
   });
 
   test('a missing directory', async ({ page }) => {
@@ -229,17 +234,19 @@ test.describe('notebooks', () => {
     await expect(page.getByText('2', { exact: true })).toBeVisible();
     await expect(headerLinks(page)).toContainText('Python 3 Kernel');
     // among others (other formats of the notebook, say)
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual(
       expect.arrayContaining([
+        ...jupyterliteLinks(`${RAW}/examples/IPython%20Kernel/Index.ipynb`),
         [
-          'View on GitHub',
-          'https://github.com/ipython/ipython/blob/6.x/examples/IPython%20Kernel/Index.ipynb'
-        ],
-        [
-          'Execute on Binder',
+          'Binder',
           'https://mybinder.org/v2/gh/ipython/ipython/6.x?filepath=examples/IPython%20Kernel/Index.ipynb'
         ],
-        ['View on nbviewer.org', `https://nbviewer.org${url}`],
+        [
+          'GitHub',
+          'https://github.com/ipython/ipython/blob/6.x/examples/IPython%20Kernel/Index.ipynb'
+        ],
+        ['nbviewer.org', `https://nbviewer.org${url}`],
         ['Download Notebook', `${RAW}/examples/IPython%20Kernel/Index.ipynb`]
       ])
     );
@@ -395,9 +402,10 @@ test.describe('users and repositories', () => {
       ['nbconvert', '/github/jupyter/nbconvert/'],
       ['next ›', '?page=2']
     ]);
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View on GitHub', 'https://github.com/jupyter'],
-      ['View on nbviewer.org', 'https://nbviewer.org/github/jupyter/']
+      ['GitHub', 'https://github.com/jupyter'],
+      ['nbviewer.org', 'https://nbviewer.org/github/jupyter/']
     ]);
 
     await listing.getByRole('link', { name: 'next ›' }).click();
