@@ -106,24 +106,24 @@ function leadingIndent(lines: string[]): string[] {
   return lines.length ? splitLines(dedent(lines.join(''))) : lines;
 }
 
-/** Python's textwrap.dedent, which also empties whitespace-only lines. */
+/**
+ * Python 3.14's textwrap.dedent, which also empties whitespace-only lines,
+ * splitting at \n only: a blank line ending in \r\n loses its \r.
+ */
 function dedent(text: string): string {
-  text = text.replace(/(?<![^\n])[ \t]+(?![^\n])/g, '');
-  let margin: string | null = null;
-  for (const [, indent] of text.matchAll(/(?<![^\n])([ \t]*)[^ \t\n]/g)) {
-    if (margin === null || margin.startsWith(indent)) {
-      margin = indent;
-    } else if (!indent.startsWith(margin)) {
-      let i = 0;
-      while (margin[i] === indent[i]) {
-        i++;
-      }
-      margin = margin.slice(0, i);
+  const lines = text.split('\n');
+  const indents = lines
+    .filter(line => line && !IS_SPACE.test(line))
+    .map(line => /^[ \t]*/.exec(line)?.[0] ?? '');
+  let margin = indents[0] ?? '';
+  for (const indent of indents) {
+    while (!indent.startsWith(margin)) {
+      margin = margin.slice(0, -1);
     }
   }
-  return margin
-    ? text.replace(new RegExp(`(?<![^\\n])${margin}`, 'g'), '')
-    : text;
+  return lines
+    .map(line => (IS_SPACE.test(line) ? '' : line.slice(margin.length)))
+    .join('\n');
 }
 
 const DOCTEST_INITIAL = new RegExp(`^[${SPACE}]*>>>`);

@@ -8,13 +8,15 @@
 - slides.json: cells' slideshow metadata and the slides that nbconvert's
   SlidesExporter makes of them, read back from its <section>s.
 
-Needs nbformat, nbconvert 7, IPython 9 and beautifulsoup4:
+Needs Python 3.14, which nbviewer.org runs (IPython's output depends on its
+textwrap and tokenizer), nbformat, nbconvert 7, IPython 9 and beautifulsoup4:
 
     python test/fixtures/generate.py
 """
 import json
 import os
 import random
+import sys
 
 import nbformat
 from bs4 import BeautifulSoup
@@ -202,6 +204,13 @@ IPYTHON_CASES = [
     "x = 1 \\\n",
     "!echo a; x = 'b\\\nfoo?",
     "%load_ext autoreload\n%autoreload 2\nimport numpy as np\n!pip install -q pandas\n%matplotlib inline",
+    # Python 3.14's textwrap.dedent empties lines of any whitespace
+    "x = 1\r\n\r\n%time x\r\n",
+    "  x = 1\r\n  \r\n  %time x\r\n",
+    "  x = 1\n  \f\n  y = 2\n",
+    ">>> x = 1\r\n\r\n>>> %time x\r\n",
+    "  a\n\u00a0\n  b",
+    "  a\n \u3000 \n   b\n",
 ]
 
 
@@ -284,6 +293,8 @@ def write_slides_cases(path):
 
 
 if __name__ == '__main__':
+    if sys.version_info < (3, 14):
+        sys.exit('generate.py needs Python 3.14')
     write_script_fixtures(os.path.join(HERE, 'script'))
     write_ipython_cases(os.path.join(HERE, 'script', 'ipython2python.json'))
     write_slides_cases(os.path.join(HERE, 'slides.json'))

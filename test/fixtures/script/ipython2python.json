@@ -354,5 +354,29 @@
  [
   "%load_ext autoreload\n%autoreload 2\nimport numpy as np\n!pip install -q pandas\n%matplotlib inline",
   "get_ipython().run_line_magic('load_ext', 'autoreload')\nget_ipython().run_line_magic('autoreload', '2')\nimport numpy as np\nget_ipython().system('pip install -q pandas')\nget_ipython().run_line_magic('matplotlib', 'inline')\n"
+ ],
+ [
+  "x = 1\r\n\r\n%time x\r\n",
+  "x = 1\r\n\nget_ipython().run_line_magic('time', 'x')\n"
+ ],
+ [
+  "  x = 1\r\n  \r\n  %time x\r\n",
+  "x = 1\r\n\nget_ipython().run_line_magic('time', 'x')\n"
+ ],
+ [
+  "  x = 1\n  \f\n  y = 2\n",
+  "x = 1\n\ny = 2\n"
+ ],
+ [
+  ">>> x = 1\r\n\r\n>>> %time x\r\n",
+  "x = 1\r\n\nget_ipython().run_line_magic('time', 'x')\n"
+ ],
+ [
+  "  a\n \n  b",
+  "a\n\nb\n"
+ ],
+ [
+  "  a\n 　 \n   b\n",
+  "a\n\n b\n"
  ]
 ]
