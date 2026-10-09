@@ -139,6 +139,15 @@ export function renderNotebook(
   // about the per-cell ones while cells are created from JSON.
   const model = new NotebookModel({ disableDocumentWideUndoRedo: false });
   model.fromJSON(trustCells(nb));
+  if (!model.getMetadata('language_info')?.name) {
+    // Highlight code as Python when the notebook doesn't name its language
+    // (nbformat 3 notebooks never do; the model then has an empty name), as
+    // nbconvert does: its default lexer is ipython3.
+    model.setMetadata('language_info', {
+      name: 'python',
+      codemirror_mode: { name: 'ipython', version: 3 }
+    });
+  }
   notebook.model = model;
   for (const cell of notebook.widgets) {
     cell.readOnly = true;
