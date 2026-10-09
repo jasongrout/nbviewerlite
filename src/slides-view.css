@@ -8,8 +8,11 @@ body.nbv-slides-page {
   overflow: hidden;
 }
 
+/* The header spans the window, like the deck. */
 .nbv-slides-page .nbv-header {
   flex: none;
+  max-width: none;
+  margin: 0;
 }
 
 .nbv-slides-page .nbv-main {

@@ -41,7 +41,7 @@
         align-items: center;
         flex-wrap: wrap;
         gap: 8px 16px;
-        padding: 8px 16px;
+        padding-block: 8px;
         border-bottom: 1px solid var(--jp-border-color2);
       }
       .nbv-brand {
@@ -56,11 +56,13 @@
         width: 24px;
         height: 31px;
       }
+      /* The page's column, header to footer */
+      .nbv-header,
       .nbv-main,
       .nbv-footer {
         max-width: 1140px;
         margin: 0 auto;
-        padding: 0 16px;
+        padding-inline: 16px;
         box-sizing: border-box;
       }
     </style>
