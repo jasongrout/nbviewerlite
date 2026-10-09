@@ -625,4 +625,19 @@ test.describe('links on format/slides/ pages', () => {
     );
     await expect(page.getByRole('heading', { name: 'Part two' })).toBeVisible();
   });
+
+  test('to other files, followed from a url/ page, open the file', async ({
+    page,
+    web,
+    baseURL
+  }) => {
+    // as relative links that the viewer can't rewrite (in a widget, say)
+    // resolve against the page
+    web.file(`${BASE}/decks/data.csv`, 'a,b\n1,2\n');
+    await page.goto('/format/slides/urls/nb.example/decks/data.csv', {
+      referer: `${baseURL}/format/slides/urls/nb.example/decks/deck.ipynb`
+    });
+    await expect(page).toHaveURL(`${BASE}/decks/data.csv`);
+    await expect(page.getByText('a,b')).toBeVisible();
+  });
 });

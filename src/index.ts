@@ -38,9 +38,12 @@ async function showUrl(
 
   // Like nbviewer: a relative link from a url/urls notebook to a
   // non-notebook file opens the file itself rather than trying to render it.
+  // Also in other formats, where nbviewer's test misses these links.
   if (
     !/\.ipynb$/i.test(filename) &&
-    document.referrer.startsWith(window.location.origin + '/url')
+    document.referrer.startsWith(
+      `${window.location.origin}/${ctx.formatPrefix}url`
+    )
   ) {
     window.location.replace(url);
     return;
