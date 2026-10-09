@@ -1,8 +1,8 @@
 # Viewer URLs get the app. Status 200 makes these rewrites: the browser keeps
 # the requested URL, which the app reads. No files live under these prefixes,
-# which matters because Cloudflare Pages applies rules even where a file
-# exists. Every other unknown path gets 404.html (also the app), with status
-# 404, and missing /static/ files get static/404.html.
+# which matters because Cloudflare applies rules even where a file exists.
+# Every other unknown path gets 404.html (also the app), with status 404, and
+# missing /static/ files get static/404.html.
 /url/*     /  200
 /urls/*    /  200
 /github/*  /  200
