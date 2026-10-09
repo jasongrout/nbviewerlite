@@ -4,9 +4,11 @@ import {
   addNbviewerLink,
   type IContext,
   setTitle,
-  showFailure
+  showFailure,
+  viewerUrl
 } from './context.ts';
 import { upgradeNotebook } from './convert.ts';
+import { formatLinks } from './formats.ts';
 import { breadcrumbs, type ILink } from './listing.ts';
 import { normalizeNotebook } from './nbformat.ts';
 import {
@@ -136,6 +138,10 @@ export async function showNotebook(
   }
 
   // Header links, in nbviewer's order.
+  const otherFormats = formatLinks(nb, ctx.format, ctx.formatBase);
+  for (const { path, title, icon } of otherFormats) {
+    addHeaderLink(viewerUrl(path), title, icon);
+  }
   const kernel = nb.metadata?.kernelspec?.display_name;
   if (kernel) {
     addHeaderLink(null, `${kernel} Kernel`, 'kernel');
@@ -161,15 +167,30 @@ export async function showNotebook(
     return;
   }
 
+  const resolver = new SourceResolver(source.url, source.linkFor);
   try {
     // Rendering code is a separate chunk, so listing, landing and error
-    // pages stay light.
+    // pages stay light; the other formats have their own.
+    if (ctx.format === 'script') {
+      const { showScript } = await import(
+        /* webpackChunkName: "script" */ './script-view.ts'
+      );
+      await showScript(nb, root, crumbs, source.title);
+      return;
+    }
+    if (ctx.format === 'slides') {
+      const { showSlides } = await import(
+        /* webpackChunkName: "slides" */ './slides-view.ts'
+      );
+      await showSlides(nb, root, crumbs, resolver);
+      return;
+    }
     const { renderNotebook } = await import(
       /* webpackChunkName: "render" */ './render.ts'
     );
     const host = h('div');
     root.replaceChildren(...crumbs, host);
-    renderNotebook(nb, host, new SourceResolver(source.url, source.linkFor));
+    renderNotebook(nb, host, resolver);
   } catch (err) {
     showFailure(ctx, err, elsewhere);
     return;

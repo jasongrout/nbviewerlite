@@ -1,0 +1,14 @@
+/* format/script/: the script, styled like JupyterLab's code cells */
+
+.nbv-script {
+  margin: 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  line-height: var(--jp-code-line-height);
+  color: var(--jp-content-font-color1);
+  background: var(--jp-cell-editor-background);
+  border: 1px solid var(--jp-cell-editor-border-color);
+  border-radius: 2px;
+}

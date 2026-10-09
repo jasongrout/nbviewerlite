@@ -7,3 +7,4 @@
 /urls/*    /  200
 /github/*  /  200
 /gist/*    /  200
+/format/*  /  200

@@ -1,7 +1,7 @@
 // Serve dist/ the way Cloudflare (wrangler.toml) or Netlify does with
 // public/_redirects: existing files as themselves; viewer URLs (url/, urls/,
-// github/, gist/) as index.html with status 200; missing /static/ files as
-// static/404.html and every other path as 404.html, with status 404.
+// github/, gist/, format/) as index.html with status 200; missing /static/
+// files as static/404.html and every other path as 404.html, with status 404.
 //
 //   npm run build && npm run preview    (PORT=8080 by default)
 
@@ -44,7 +44,7 @@ createServer(async (req, res) => {
   }
   let file = normalize(join(root, pathname));
   let status = 200;
-  if (/^\/(url|urls|github|gist)\//.test(pathname)) {
+  if (/^\/(url|urls|github|gist|format)\//.test(pathname)) {
     file = join(root, 'index.html');
   } else if (pathname === '/' || pathname === '') {
     file = join(root, 'index.html');
