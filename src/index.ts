@@ -18,6 +18,7 @@ import { showNotebook } from './notebook-view.ts';
 import { link, showError, showHome } from './page.ts';
 import { viewerPathForInput } from './rewrites.ts';
 import { fetchUrl, parseRoute, viewerPath } from './route.ts';
+import { showcase } from './showcase.ts';
 
 import './style.css';
 
@@ -56,6 +57,16 @@ async function showUrl(
   });
 }
 
+/** The FAQ and its Markdown renderer are a separate chunk. */
+async function showFaqPage(root: HTMLElement): Promise<void> {
+  try {
+    const { showFaq } = await import(/* webpackChunkName: "faq" */ './faq.ts');
+    showFaq(root);
+  } catch (err) {
+    showError(root, err instanceof Error ? err.message : String(err));
+  }
+}
+
 async function main(): Promise<void> {
   const root = document.getElementById('nbviewer');
   if (!root) {
@@ -65,11 +76,17 @@ async function main(): Promise<void> {
   const route = parseRoute(ctx.path);
   switch (route.kind) {
     case 'home':
-      showHome(root, input => {
-        const path = viewerPathForInput(input);
-        return path === null ? null : viewerUrl(path);
-      });
+      showHome(
+        root,
+        input => {
+          const path = viewerPathForInput(input);
+          return path === null ? null : viewerUrl(path);
+        },
+        showcase()
+      );
       return;
+    case 'faq':
+      return showFaqPage(root);
     case 'redirect':
       redirect(route.path);
       return;

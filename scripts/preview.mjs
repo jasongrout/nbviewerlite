@@ -48,6 +48,9 @@ createServer(async (req, res) => {
     file = join(root, 'index.html');
   } else if (pathname === '/' || pathname === '') {
     file = join(root, 'index.html');
+  } else if (pathname === '/faq' || pathname === '/faq/') {
+    // the FAQ, also rewritten to the app by _redirects
+    file = join(root, 'index.html');
   } else if (!file.startsWith(root + sep) || !(await isFile(file))) {
     status = 404;
     file = pathname.startsWith('/static/')

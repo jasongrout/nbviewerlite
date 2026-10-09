@@ -16,6 +16,14 @@ test('empty path and index.html are the landing page', () => {
   assert.deepEqual(parseRoute('index.html'), { kind: 'home' });
 });
 
+test('faq and faq/ are the FAQ, as on nbviewer', () => {
+  assert.deepEqual(parseRoute('faq'), { kind: 'faq' });
+  assert.deepEqual(parseRoute('faq/'), { kind: 'faq' });
+  assert.deepEqual(parseRoute('faq//'), { kind: 'notfound' });
+  assert.deepEqual(parseRoute('faq/x'), { kind: 'notfound' });
+  assert.deepEqual(parseRoute('FAQ'), { kind: 'notfound' });
+});
+
 test('unknown paths are not found', () => {
   assert.deepEqual(parseRoute('nonsense/here'), { kind: 'notfound' });
   assert.deepEqual(parseRoute('url/hostonly'), { kind: 'notfound' });
