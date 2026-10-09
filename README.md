@@ -65,7 +65,11 @@ To change the build settings below, add them as build variables.
 
 Pushes to the production branch deploy the site. Other branches get preview
 deployments: Workers Builds runs `npx wrangler preview` for them, which needs
-the (empty) `[previews]` block in `wrangler.toml`.
+the (empty) `[previews]` block in `wrangler.toml`. Previews are served at
+`https://<preview>-nbviewerlite.<subdomain>.workers.dev` because of
+`preview_urls = true`, which takes effect when the production branch deploys
+it (`wrangler preview` doesn't change it); until then, previews build but have
+no URL.
 
 To check a build the way Cloudflare serves it, with its local emulator:
 

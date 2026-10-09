@@ -3,6 +3,12 @@
 name = "nbviewerlite"
 compatibility_date = "2026-10-01"
 
+# Preview deployments get URLs on workers.dev
+# (<preview>-nbviewerlite.<subdomain>.workers.dev). This is a setting of the
+# deployed Worker: `wrangler deploy` applies it, `wrangler preview` doesn't.
+# It must stay above the [tables] below to be a top-level setting.
+preview_urls = true
+
 # dist/ as static assets: files as themselves; viewer URLs rewritten to the
 # app by dist/_redirects; other unknown paths get the nearest 404.html
 # (the app, or static/404.html under /static/) with status 404.
