@@ -4,6 +4,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import type { FrameLocator, Page } from '@playwright/test';
 
@@ -23,6 +24,8 @@ import {
 
 const RAW = 'https://raw.githubusercontent.com/fx/demo/main';
 const VIEW = '/github/fx/demo/blob/main/docs/report.html';
+const JQUERY =
+  'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js';
 
 /**
  * What raw.githubusercontent.com sends with every file: browsers neither
@@ -53,6 +56,7 @@ const REPORT = `<!DOCTYPE html>
 <li><a href="img/plot.png">the image</a></li>
 <li><a href="https://example.org/">example.org</a></li>
 <li><a href="#section-2">section 2</a></li>
+<li><a href="#section-2" target="_top">the second section</a></li>
 </ul>
 <p id="probe">not probed</p>
 <div style="height: 3000px"></div>
@@ -110,6 +114,49 @@ try {
   document.getElementById('slide').textContent = e.name;
 }
 </script>`,
+  // nbconvert's classic template, with the well-known "toggle code" form in
+  // an output (and jQuery from cdnjs)
+  'docs/export.html': `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>export</title>
+<script src="${JQUERY}"></script>
+</head>
+<body>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input"><pre>print("hello")</pre></div>
+<div class="output_wrapper"><div class="output_html rendered_html">
+<script>
+code_show=true;
+function code_toggle() {
+ if (code_show){
+ $('div.input').hide();
+ } else {
+ $('div.input').show();
+ }
+ code_show = !code_show
+}
+$( document ).ready(code_toggle);
+</script>
+<form action="javascript:code_toggle()"><input type="submit" value="Click here to toggle on/off the raw code."></form>
+</div></div>
+</div>
+<p><a href="javascript:code_toggle()%3B%20void%200">toggle the code</a>
+<a href="javascript:code_toggle()" onclick="return false">handled</a>
+<a href="javascript:missing()">broken</a></p>
+<form action="other.html">
+<button formaction="javascript:code_toggle()">toggle it from a button</button>
+</form>
+</body>
+</html>`,
+  // a script twice
+  'docs/twice.html':
+    '<!DOCTYPE html><p id="count">0</p>' +
+    '<script src="js/count.js"></script><script src="js/count.js"></script>',
+  'docs/js/count.js':
+    "var count = document.getElementById('count');\n" +
+    'count.textContent = Number(count.textContent) + 1;\n',
   'notebooks/analysis.ipynb': notebook([
     markdown(
       '# Analysis\n\n[the report, section 2](../docs/report.html#section-2)'
@@ -336,6 +383,63 @@ test.describe('an HTML file in a repository', () => {
     await frame.getByRole('link', { name: 'section 2' }).click();
     await expect(section).toBeInViewport();
     await expect(page).toHaveURL(VIEW);
+    // also with target=_top, the page itself when nbviewer serves it
+    await frame.locator('body').evaluate(() => {
+      location.hash = '';
+      scrollTo(0, 0);
+    });
+    await expect(section).not.toBeInViewport();
+    await frame.getByRole('link', { name: 'the second section' }).click();
+    await expect(section).toBeInViewport();
+    await expect(page).toHaveURL(VIEW);
+  });
+
+  test('javascript: links and forms run in the page', async ({
+    page,
+    web,
+    pageErrors
+  }) => {
+    web.file(
+      JQUERY,
+      readFileSync('node_modules/jquery/dist/jquery.min.js', 'utf8'),
+      { contentType: 'text/javascript' }
+    );
+    await page.goto('/github/fx/demo/blob/main/docs/export.html');
+    const { frame } = htmlFrame(page, 'export.html');
+    const input = frame.getByText('print("hello")');
+    // hidden once the document is ready
+    await expect(input).toBeHidden();
+    await frame
+      .getByRole('button', {
+        name: 'Click here to toggle on/off the raw code.'
+      })
+      .click();
+    await expect(input).toBeVisible();
+    // percent-decoded, as browsers do
+    await frame.getByRole('link', { name: 'toggle the code' }).click();
+    await expect(input).toBeHidden();
+    // not when the page handles the click itself
+    await frame.getByRole('link', { name: 'handled' }).click();
+    await frame.getByRole('link', { name: 'toggle the code' }).click();
+    await expect(input).toBeVisible();
+    // a button's formaction
+    await frame
+      .getByRole('button', { name: 'toggle it from a button' })
+      .click();
+    await expect(input).toBeHidden();
+    // what fails is reported, as anywhere
+    await frame.getByRole('link', { name: 'broken' }).click();
+    await expect
+      .poll(() => pageErrors.map(String))
+      .toEqual(['ReferenceError: missing is not defined']);
+    pageErrors.length = 0;
+    await expect(page).toHaveURL('/github/fx/demo/blob/main/docs/export.html');
+  });
+
+  test('a script used twice runs twice', async ({ page }) => {
+    await page.goto('/github/fx/demo/blob/main/docs/twice.html');
+    const { frame } = htmlFrame(page, 'twice.html');
+    await expect(frame.locator('#count')).toHaveText('2');
   });
 });
 

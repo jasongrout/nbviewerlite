@@ -16,7 +16,6 @@ import { fileCrumbs, loadFile } from './file-view.ts';
 import {
   absoluteUrl,
   cssUrls,
-  dataUrl,
   inlineStylesheet,
   opensInViewer,
   ResourceLoader
@@ -194,16 +193,14 @@ async function inline(
   }
   const attr = isLink ? 'href' : 'src';
   const url = absoluteUrl(el.getAttribute(attr) ?? '', baseUrl);
-  const text = url === null ? null : await loader.load(url);
-  if (url === null || text === null) {
+  const data =
+    url === null
+      ? null
+      : await loader.inline(url, isLink ? 'text/css' : 'text/javascript');
+  if (data === null) {
     return;
   }
-  el.setAttribute(
-    attr,
-    isLink
-      ? dataUrl(await inlineStylesheet(text, url, loader), 'text/css')
-      : dataUrl(text, 'text/javascript')
-  );
+  el.setAttribute(attr, data);
   // the copy needn't match the original's bytes, and isn't cross-origin
   el.removeAttribute('integrity');
   el.removeAttribute('crossorigin');
@@ -211,35 +208,77 @@ async function inline(
 
 /**
  * Runs first in the frame, and makes up for its document URL (about:srcdoc)
- * not being its base URL (the raw file):
+ * not being its base URL (the raw file), and for the sandbox:
  * - fragment links (#id) would leave the page for the raw file: they
  *   scroll within the page instead, unless the page's scripts handle them;
+ * - javascript: URLs don't run in a sandboxed frame: those of links and
+ *   forms run here instead (nbconvert's "toggle code" form, say), in the
+ *   page's global scope, and what they throw is reported as uncaught;
  * - history.pushState and replaceState resolve URLs against the base, on
  *   another origin, and throw: they get to change the fragment, which is
  *   what pages change in place (slide decks keep the slide there).
+ * Links and forms that target _top or _parent count as in the page, which
+ * they are when nbviewer serves it.
  */
-const FRAME_SCRIPT = `addEventListener('click', function (event) {
-  var target = event.target;
-  var link = target.closest && target.closest('a[href], area[href]');
-  var href = link && link.getAttribute('href');
-  var frame = link && link.getAttribute('target');
-  if (href && href.charAt(0) === '#' && !event.defaultPrevented &&
-      (!frame || frame === '_self')) {
-    event.preventDefault();
-    location.hash = href;
+const FRAME_SCRIPT = `(function () {
+  function inPlace(target) {
+    return !target || /^_(self|top|parent)$/i.test(target);
   }
-});
-['pushState', 'replaceState'].forEach(function (name) {
-  var original = history[name];
-  history[name] = function (state, title, url) {
-    if (url === undefined || url === null) {
-      return original.call(history, state, title);
+  // the code a javascript: URL runs, percent-decoded, or null
+  function javascript(url) {
+    try { url = new URL(url, document.baseURI); } catch (e) { return null; }
+    if (url.protocol !== 'javascript:') { return null; }
+    var code = url.href.slice(url.protocol.length);
+    return code.replace(/(%[0-9a-f]{2})+/gi, function (bytes) {
+      try { return decodeURIComponent(bytes); } catch (e) { return bytes; }
+    });
+  }
+  var run = eval; // indirect: global scope
+  addEventListener('click', function (event) {
+    var target = event.target;
+    var link = target.closest && target.closest('a[href], area[href]');
+    var href = link && link.getAttribute('href');
+    if (!href || event.defaultPrevented ||
+        !inPlace(link.getAttribute('target'))) {
+      return;
     }
-    var hash = '';
-    try { hash = new URL(url, document.baseURI).hash; } catch (e) {}
-    return original.call(history, state, title, 'about:srcdoc' + hash);
-  };
-});`;
+    if (href.charAt(0) === '#') {
+      event.preventDefault();
+      location.hash = href;
+      return;
+    }
+    var code = javascript(href);
+    if (code !== null) {
+      event.preventDefault();
+      run(code);
+    }
+  });
+  addEventListener('submit', function (event) {
+    var form = event.target;
+    var button = event.submitter;
+    // a button's formaction and formtarget override the form's
+    function get(name) {
+      return button && button.hasAttribute('form' + name) ?
+        button.getAttribute('form' + name) : form.getAttribute(name);
+    }
+    var code = javascript(get('action') || '');
+    if (code !== null && !event.defaultPrevented && inPlace(get('target'))) {
+      event.preventDefault();
+      run(code);
+    }
+  });
+  ['pushState', 'replaceState'].forEach(function (name) {
+    var original = history[name];
+    history[name] = function (state, title, url) {
+      if (url === undefined || url === null) {
+        return original.call(history, state, title);
+      }
+      var hash = '';
+      try { hash = new URL(url, document.baseURI).hash; } catch (e) {}
+      return original.call(history, state, title, 'about:srcdoc' + hash);
+    };
+  });
+})();`;
 
 /** FRAME_SCRIPT, and scrolling to the viewer URL's fragment, if any. */
 function frameScript(hash: string): string {

@@ -9,6 +9,8 @@ import {
   isHtmlFile,
   MAX_BYTES,
   MAX_FETCHES,
+  MAX_IMPORTS,
+  MAX_OUTPUT,
   opensInViewer,
   ResourceLoader,
   rewriteCss
@@ -63,6 +65,11 @@ test('dataUrl encodes UTF-8 as base64', () => {
   // longer than one chunk
   const long = 'é'.repeat(100000);
   assert.equal(decode(dataUrl(long, 'text/javascript')), long);
+  // ASCII, from end to end of its range
+  const ascii = '\0.a::after { content: "~" }\n\x7f';
+  assert.equal(decode(dataUrl(ascii, 'text/css')), ascii);
+  // just past it, Latin-1 isn't UTF-8
+  assert.equal(decode(dataUrl('\x80ÿ', 'text/css')), '\x80ÿ');
 });
 
 test('cssUrls finds url() values and @import targets', () => {
@@ -273,3 +280,94 @@ test('inlineStylesheet inlines imports from the repo, recursively', async () => 
     RAW + 'fonts/f.css'
   ]);
 });
+
+test('ResourceLoader.inline counts every element against MAX_OUTPUT', async () => {
+  const { fetchUrl, requests } = fakeFetch({ [RAW + 'big.js']: 1024 * 1024 });
+  const loader = new ResourceLoader(inRepo, fetchUrl);
+  // a page with 40 <script src="big.js"> elements
+  const urls = await Promise.all(
+    Array.from({ length: 40 }, () =>
+      loader.inline(RAW + 'big.js', 'text/javascript')
+    )
+  );
+  const inlined = urls.filter(url => url !== null);
+  assert.equal(decode(inlined[0]).length, 1024 * 1024);
+  const size = inlined[0].length;
+  assert.equal(inlined.length, Math.floor(MAX_OUTPUT / size));
+  // the first ones, in document order
+  assert.deepEqual(
+    urls.map(url => url !== null),
+    urls.map((_, i) => i < inlined.length)
+  );
+  assert.deepEqual(requests, [RAW + 'big.js']);
+});
+
+/** The data: URLs a stylesheet @imports, at any depth. */
+function inlinedImports(css: string): string[] {
+  return cssUrls(css)
+    .filter(({ url, isImport }) => isImport && url.startsWith('data:'))
+    .flatMap(({ url }) => [url, ...inlinedImports(decode(url))]);
+}
+
+test(
+  'inlineStylesheet stays within MAX_OUTPUT on nested repeats',
+  { timeout: 5000 },
+  async () => {
+    // each sheet imports the next twice: 2^30 copies of the last one
+    const files: Record<string, string> = {
+      [RAW + 's30.css']: '.s30 { color: red }'
+    };
+    for (let i = 0; i < 30; i++) {
+      files[`${RAW}s${i}.css`] =
+        `@import "s${i + 1}.css"; @import url(s${i + 1}.css); .s${i} {}`;
+    }
+    const { fetchUrl, requests } = fakeFetch(files);
+    const loader = new ResourceLoader(inRepo, fetchUrl);
+    const css = await inlineStylesheet('@import "s0.css";', RAW, loader);
+    assert.ok(css.length <= MAX_OUTPUT);
+    assert.equal(requests.length, 31);
+    // inlined from the top down to where it no longer fit; from there, the
+    // imports stay URLs
+    let sheet = css;
+    let depth = 0;
+    for (;;) {
+      const [, first, second] =
+        /^@import "([^"]+)"(?:; @import url\("([^"]+)"\))?/.exec(sheet) ?? [];
+      if (!first?.startsWith('data:')) {
+        break;
+      }
+      // both imports of a sheet, the same
+      assert.equal(second ?? first, first);
+      sheet = decode(first);
+      depth++;
+    }
+    assert.ok(depth >= 1 && depth <= 30, String(depth));
+    const cut = `${RAW}s${depth}.css`;
+    assert.ok(
+      sheet.startsWith(`@import "${cut}"; @import url("${cut}");`),
+      sheet.slice(0, 200)
+    );
+  }
+);
+
+test(
+  'inlineStylesheet inlines at most MAX_IMPORTS imports',
+  { timeout: 5000 },
+  async () => {
+    // each sheet imports all after it: 2^30 ways to reach the last one
+    const files: Record<string, string> = {};
+    for (let i = 0; i < MAX_FETCHES; i++) {
+      const later = Array.from(
+        { length: MAX_FETCHES - 1 - i },
+        (_, j) => `@import "d${i + 1 + j}.css";`
+      );
+      files[`${RAW}d${i}.css`] = later.join('') + `.d${i} {}`;
+    }
+    const { fetchUrl, requests } = fakeFetch(files);
+    const loader = new ResourceLoader(inRepo, fetchUrl);
+    const css = await inlineStylesheet('@import "d0.css";', RAW, loader);
+    assert.equal(requests.length, MAX_FETCHES);
+    const inlined = inlinedImports(css).length;
+    assert.ok(inlined > 0 && inlined <= MAX_IMPORTS, String(inlined));
+  }
+);

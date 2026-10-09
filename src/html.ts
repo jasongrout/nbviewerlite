@@ -9,10 +9,25 @@
  * defer, async) as they were.
  */
 
-/** At most this many stylesheets and scripts get inlined per page... */
+/** At most this many stylesheets and scripts get fetched per page... */
 export const MAX_FETCHES = 32;
 /** ...together at most this many bytes. */
 export const MAX_BYTES = 10 * 1024 * 1024;
+/**
+ * Inlining them writes at most this many characters of data: URLs per
+ * page: one for every element and @import that loads a file, so repeats
+ * count again, and stylesheets inlined into others count again as part of
+ * those. Imported stylesheets also count their text each time they are
+ * inlined, for the work of reading it. Twice MAX_BYTES, since base64 takes
+ * a third more, and files repeat.
+ */
+export const MAX_OUTPUT = 2 * MAX_BYTES;
+/**
+ * At most this many @imports get inlined per page, counting a stylesheet
+ * each time it is inlined into another: imports of imports can repeat
+ * exponentially (a imports b and c, which both import d, ...).
+ */
+export const MAX_IMPORTS = 2 * MAX_FETCHES;
 
 export function isHtmlFile(path: string): boolean {
   return /\.html?$/i.test(path);
@@ -46,11 +61,15 @@ export function absoluteUrl(url: string, base: string): string | null {
 
 /** `text` as a base64 data: URL of MIME type `type`, in UTF-8. */
 export function dataUrl(text: string, type: string): string {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  // in chunks: fromCharCode takes its arguments on the stack
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  // ASCII is its own UTF-8, and copying it byte by byte is slow
+  let binary = text;
+  if (!/^[\0-\x7f]*$/.test(text)) {
+    const bytes = new TextEncoder().encode(text);
+    binary = '';
+    // in chunks: fromCharCode takes its arguments on the stack
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
   }
   return `data:${type};charset=utf-8;base64,${btoa(binary)}`;
 }
@@ -221,17 +240,23 @@ export function rewriteCss(
   return out + css.slice(last);
 }
 
+/** What a stylesheet or a script gets inlined as. */
+export type InlineType = 'text/css' | 'text/javascript';
+
 /**
- * Fetches the stylesheets and scripts to inline: those for which
- * `inlineUrl` gives a URL to fetch from (null leaves a URL to the browser),
- * within MAX_FETCHES and MAX_BYTES.
+ * Fetches the stylesheets and scripts to inline, and makes data: URLs of
+ * them: those for which `inlineUrl` gives a URL to fetch from (null leaves
+ * a URL to the browser), within the limits above.
  */
 export class ResourceLoader {
   private readonly inlineUrl: (url: string) => string | null;
   private readonly fetchUrl: (url: string) => Promise<Response>;
   private readonly cache = new Map<string, Promise<string | null>>();
+  private readonly dataUrls = new Map<string, Promise<string | null>>();
   private fetchesLeft = MAX_FETCHES;
   private bytesLeft = MAX_BYTES;
+  private outputLeft = MAX_OUTPUT;
+  private importsLeft = MAX_IMPORTS;
 
   constructor(
     inlineUrl: (url: string) => string | null,
@@ -253,6 +278,59 @@ export class ResourceLoader {
       this.cache.set(url, text);
     }
     return text;
+  }
+
+  /**
+   * The stylesheet or script at `url` as a data: URL, for one element that
+   * loads it, or null to leave the element as it is: the file isn't to be
+   * inlined, fails to load or doesn't fit the limits. Each file is fetched
+   * and encoded once, but every element counts against MAX_OUTPUT.
+   */
+  async inline(url: string, type: InlineType): Promise<string | null> {
+    const key = `${type} ${url}`;
+    let data = this.dataUrls.get(key);
+    if (!data) {
+      data = this.encode(url, type);
+      this.dataUrls.set(key, data);
+    }
+    const text = await data;
+    return text !== null && this.charge(text.length) ? text : null;
+  }
+
+  /**
+   * Count `size` characters against MAX_OUTPUT; false, counting nothing, if
+   * they don't fit.
+   */
+  charge(size: number): boolean {
+    if (size > this.outputLeft) {
+      return false;
+    }
+    this.outputLeft -= size;
+    return true;
+  }
+
+  /**
+   * Count an imported stylesheet with `size` characters of text about to be
+   * inlined; false, counting nothing, if that's over MAX_IMPORTS or
+   * MAX_OUTPUT.
+   */
+  chargeImport(size: number): boolean {
+    if (this.importsLeft <= 0 || !this.charge(size)) {
+      return false;
+    }
+    this.importsLeft--;
+    return true;
+  }
+
+  private async encode(url: string, type: InlineType): Promise<string | null> {
+    const text = await this.load(url);
+    if (text === null) {
+      return null;
+    }
+    return dataUrl(
+      type === 'text/css' ? await inlineStylesheet(text, url, this) : text,
+      type
+    );
   }
 
   private async fetchText(url: string): Promise<string | null> {
@@ -304,7 +382,7 @@ export class ResourceLoader {
 /**
  * A stylesheet from `sheetUrl`, ready to load from a data: URL: relative
  * URLs made absolute, and the stylesheets it @imports inlined if `loader`
- * gets them (recursively, but not in cycles).
+ * gets them and they fit the limits (recursively, but not in cycles).
  */
 export async function inlineStylesheet(
   css: string,
@@ -313,21 +391,29 @@ export async function inlineStylesheet(
   importedBy: readonly string[] = []
 ): Promise<string> {
   const seen = [...importedBy, sheetUrl];
+  // each stylesheet once, with how often rewriteCss will write it
+  const imports = new Map<string, number>();
+  for (const { url, isImport } of cssUrls(css)) {
+    const absolute = isImport ? absoluteUrl(url, sheetUrl) : null;
+    if (absolute !== null && !seen.includes(absolute)) {
+      imports.set(absolute, (imports.get(absolute) ?? 0) + 1);
+    }
+  }
   const inlined = new Map<string, string>();
   await Promise.all(
-    cssUrls(css)
-      .filter(({ isImport }) => isImport)
-      .map(async ({ url }) => {
-        const absolute = absoluteUrl(url, sheetUrl);
-        if (absolute === null || seen.includes(absolute)) {
-          return;
-        }
-        const text = await loader.load(absolute);
-        if (text !== null) {
-          const sheet = await inlineStylesheet(text, absolute, loader, seen);
-          inlined.set(absolute, dataUrl(sheet, 'text/css'));
-        }
-      })
+    Array.from(imports, async ([url, count]) => {
+      const text = await loader.load(url);
+      // counted before going deeper, so that the recursion ends even when
+      // no output fits any more
+      if (text === null || !loader.chargeImport(text.length)) {
+        return;
+      }
+      const sheet = await inlineStylesheet(text, url, loader, seen);
+      const data = dataUrl(sheet, 'text/css');
+      if (loader.charge(data.length * count)) {
+        inlined.set(url, data);
+      }
+    })
   );
   return rewriteCss(css, sheetUrl, inlined);
 }
