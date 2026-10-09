@@ -1,0 +1,10 @@
+/* A widget that can't be shown says why, styled like an error output. */
+.nbv-widget-error {
+  padding: 4px 8px;
+  background: var(--jp-rendermime-error-background);
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size);
+  line-height: var(--jp-code-line-height);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
