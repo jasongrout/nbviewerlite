@@ -10,6 +10,7 @@
  *   github/{user}/{repo}/blob/{ref}/{path}   a notebook (or file)
  *   gist/{user}/{id}[/{file}]                a gist, or one of its files
  *   gist/{user}/                             a user's gists
+ *   faq[/]                                   the FAQ
  *
  * plus nbviewer's redirects (trailing slashes, old URL forms). For url/urls,
  * a query string on the remote URL is carried as a final, percent-encoded
@@ -19,6 +20,7 @@
 
 export type Route =
   | { kind: 'home' }
+  | { kind: 'faq' }
   | { kind: 'notfound' }
   /** Go to another viewer path, keeping query string and fragment. */
   | { kind: 'redirect'; path: string }
@@ -61,6 +63,7 @@ const removeSlash = (_: string[], path: string) =>
 /** Raw (percent-encoded) path pieces get decoded only where they are values. */
 const ROUTES: Matcher[] = [
   [/^index\.html$/, () => ({ kind: 'home' })],
+  [/^faq\/?$/, () => ({ kind: 'faq' })],
   // github provider: old URL forms caught under url/
   [/^urls?\/github\.com\/(.*)$/, ([rest]) => redirect(`github/${rest}`)],
   [

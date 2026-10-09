@@ -103,7 +103,9 @@ export function showHome(
         {},
         'A simple way to share Jupyter notebooks. This version of ',
         link('https://nbviewer.org', 'nbviewer'),
-        ' fetches and renders notebooks in your browser.'
+        ' fetches and renders notebooks in your browser (',
+        link('/faq', 'FAQ'),
+        ').'
       ),
       form,
       message
