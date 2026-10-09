@@ -79,7 +79,7 @@ module.exports = (env, argv) => ({
   ],
   devServer: {
     port: 8080,
-    // the same rewrite as public/_redirects
+    // index.html for every path that isn't a file, as on Cloudflare Pages
     historyApiFallback: { disableDotRule: true },
     static: false
   },

@@ -36,25 +36,52 @@ npm run preview      # serve dist/ like the production hosts do
 
 ## Deployment
 
-`npm run build` writes a static site to `dist/`. Every path that isn't a file
-has to be answered with `index.html` and status 200 (a rewrite, not a
-redirect), so the browser keeps the URL the app reads. Assets live under
-`/static/` with content-hashed names, and the site must be served from the
-root of its domain.
+The site runs on Cloudflare Pages. `npm run build` writes a static site to
+`dist/`, and Pages serves it like this:
 
-- **Netlify:** connect the repository. `netlify.toml` sets the build command
-  and the `dist` publish directory, and `_redirects` does the rewrite:
-  `/*  /index.html  200` (rules apply only where no file exists), with
-  missing `/static/` files answered by a 404.
-- **Cloudflare Pages:** connect the repository with build command
-  `npm run build` and output directory `dist` (as in `wrangler.toml`), or
-  upload a local build with `npx wrangler pages deploy dist`. Pages ignores
-  the catch-all rule in `_redirects` (it reports it as an infinite loop) and
-  rewrites unknown paths to `index.html` by itself, as long as `dist/` has no
-  top-level `404.html`. Don't add one.
+- files as themselves: content-hashed assets under `/static/`, `favicon.ico`,
+  `robots.txt`;
+- `index.html`, with status 200, for every other path. This is Pages'
+  single-page-app mode, which is on because `dist/` has no top-level
+  `404.html`. Don't add one. The browser keeps the requested URL, which the
+  app reads;
+- missing `/static/` files get `static/404.html`, with status 404;
+- headers from `_headers`.
 
-Other static hosts work if they can rewrite unknown paths to `/index.html`,
-e.g. nginx with `try_files $uri /index.html;`.
+The site must be served from the root of its domain.
+
+### Cloudflare Pages
+
+One-time setup, in the Cloudflare dashboard:
+
+1. Create a Pages project connected to this GitHub repository
+   (Workers & Pages > Create > Pages > Connect to Git).
+2. Project name: `nbviewerlite`, as in `wrangler.toml`.
+3. Production branch: `main`. Framework preset: none. Build command:
+   `npm run build`. Build output directory: `dist`.
+4. Save and deploy.
+
+Node.js comes from `.node-version`. Every push to `main` deploys to
+production (`nbviewerlite.pages.dev`). Other branches and pull requests get
+preview deployments at `<branch>.nbviewerlite.pages.dev`. To change the build
+settings below, add them as environment variables in the project's settings.
+
+To check a build the way Pages serves it, with Cloudflare's local emulator:
+
+```shell
+npm run build
+npx wrangler pages dev dist
+```
+
+A local build can also be uploaded without the Git integration:
+`npx wrangler pages deploy dist --project-name nbviewerlite`, after
+`npx wrangler login`.
+
+### Other hosts
+
+- **Netlify:** `netlify.toml` has the build settings and the rewrite rules.
+- Any host that answers unknown paths with `/index.html` and status 200,
+  e.g. nginx with `try_files $uri /index.html;`.
 
 ### Build settings
 

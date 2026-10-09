@@ -1,6 +1,8 @@
-# Cloudflare Pages. Set the build command to `npm run build` in the Pages
-# project; it serves the `dist` directory. Pages serves index.html for paths
-# with no file (its SPA mode) as long as dist/ has no top-level 404.html.
+# Cloudflare Pages configuration (see "Deployment" in README.md).
+#
+# The project name must match this one. Pages serves dist/: files as
+# themselves, missing /static/ files with static/404.html, and index.html
+# (status 200) for every other path, because dist/ has no top-level 404.html.
 name = "nbviewerlite"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"

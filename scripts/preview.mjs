@@ -1,6 +1,6 @@
-// Serve dist/ the way Netlify does with public/_redirects (and Cloudflare
-// Pages with its SPA fallback): existing files as themselves, missing
-// /static/ files as 404s, every other path as index.html with status 200.
+// Serve dist/ the way Cloudflare Pages does (and Netlify, with the rules in
+// netlify.toml): existing files as themselves, missing /static/ files as
+// 404s, every other path as index.html with status 200.
 //
 //   npm run build && npm run preview    (PORT=8080 by default)
 
@@ -44,7 +44,7 @@ createServer(async (req, res) => {
   let file = normalize(join(root, pathname));
   let status = 200;
   if (!file.startsWith(root + sep) || !(await isFile(file))) {
-    // like public/_redirects: missing assets are 404s, anything else the app
+    // missing assets are 404s, anything else gets the app
     if (pathname.startsWith('/static/')) {
       file = join(root, 'static', '404.html');
       status = 404;

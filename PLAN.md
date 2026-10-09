@@ -31,26 +31,29 @@ over; the nbviewer server and its templates do not.
 
 ## Hosting
 
-Netlify and Cloudflare Pages, configured by files in the build output:
+Cloudflare Pages, connected to the GitHub repository: pushes to `main`
+deploy to production, other branches and pull requests get preview URLs.
+Pages serves `dist/`:
 
-- Netlify: `_redirects` with `/*  /index.html  200`. Status 200 makes it a
-  rewrite, not a redirect: the host returns `index.html`'s contents at the
-  requested URL, so the address bar and `location.pathname` keep the original
-  path, which the app then reads. Files that exist (`/static/...`,
-  `/favicon.ico`) are served as themselves, because rules don't apply over
-  existing files ("shadowing"). Missing `/static/` files get a 404 instead of
-  the app.
-- Cloudflare Pages: ignores that catch-all rule (it reports an infinite loop)
-  and serves `index.html` for unknown paths by itself, as long as the site has
-  no top-level `404.html`. Missing `/static/` files get `static/404.html`.
-- `_headers`: basic security headers. Hashed assets keep the hosts' default
-  caching (revalidated with ETags): a year-long `immutable` header would also
-  stick to whatever a missing asset path returned.
-- `netlify.toml` (build command and publish directory) and `wrangler.toml`
-  (Cloudflare Pages output directory).
+- Files as themselves (`/static/...`, `/favicon.ico`).
+- `index.html` with status 200 for every other path: Pages' single-page-app
+  mode, on as long as the site has no top-level `404.html`. Status 200 makes
+  it a rewrite, not a redirect: the address bar and `location.pathname` keep
+  the original path, which the app then reads.
+- Missing `/static/` files get `static/404.html` (status 404), not the app.
+- `_headers`: basic security headers. Hashed assets keep the default caching
+  (revalidated with ETags): a year-long `immutable` header would also stick
+  to whatever a missing asset path returned.
+- `wrangler.toml` names the project and its output directory, and
+  `.node-version` pins Node.js for the build.
 
-Any other host that can rewrite unknown paths to `index.html` works too
-(nginx `try_files $uri /index.html`, S3 + CloudFront error mapping). GitHub
+Locally, `npm run preview` (a small Node server) and `npx wrangler pages dev
+dist` (Cloudflare's emulator) serve the build the same way.
+
+Other hosts work if they can rewrite unknown paths to `index.html`:
+`netlify.toml` has Netlify's settings and rules (`/*  /index.html  200`;
+Cloudflare Pages rejects that rule as an infinite loop, which is why it isn't
+in a `_redirects` file); nginx needs `try_files $uri /index.html`. GitHub
 Pages can't rewrite; its `404.html` workaround answers with HTTP 404.
 
 Consequences of being static:
@@ -66,7 +69,7 @@ Consequences of being static:
 ## Architecture
 
 ```
-browser                                   static host (Netlify / Cloudflare)
+browser                                   static host (Cloudflare Pages)
 -------                                   ----------------------------------
 GET /github/u/r/blob/main/a.ipynb  ---->  no such file: rewrite -> index.html (200)
 GET /static/js/main.<hash>.js      ---->  file
@@ -134,9 +137,9 @@ iframe (phase 4).
 ### Phase 1 (minimal): static site, `/url/` and `/urls/` (done)
 
 - Repo setup: rspack build into `dist/`; `index.html` generated with
-  absolute, content-hashed asset URLs; `_redirects`, `_headers`,
-  `netlify.toml`, `wrangler.toml`; a local preview server that does the same
-  rewrite; README with deploy steps.
+  absolute, content-hashed asset URLs; `_headers`, `wrangler.toml`,
+  `netlify.toml`; a local preview server that does the same rewrite; README
+  with deploy steps.
 - Router for `url/{host}/{path}` and `urls/{host}/{path}` (with nbviewer's
   encoding of query strings as a trailing `%3F...` segment).
 - Fetch in the browser, with clear errors (CORS, HTTP status, invalid JSON,
