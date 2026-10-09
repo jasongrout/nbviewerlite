@@ -61,7 +61,7 @@ function createEditorServices() {
 }
 
 /**
- * Mark code cells trusted, so their outputs render as they do in v1
+ * Mark code cells trusted, so their outputs render as they do on nbviewer.org
  * (nbconvert passes HTML and JavaScript outputs through unchanged).
  */
 function trustCells(nb: nbformat.INotebookContent): nbformat.INotebookContent {

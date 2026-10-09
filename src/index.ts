@@ -7,6 +7,13 @@ import {
   redirect,
   viewerUrl
 } from './context.ts';
+import { showGist, showGistUser } from './gist-views.ts';
+import {
+  showGithubBlob,
+  showGithubRepo,
+  showGithubTree,
+  showGithubUser
+} from './github-views.ts';
 import { showNotebook } from './notebook-view.ts';
 import { link, showError, showHome } from './page.ts';
 import { viewerPathForInput } from './rewrites.ts';
@@ -66,6 +73,18 @@ async function main(): Promise<void> {
       return;
     case 'url':
       return showUrl(ctx, route.remoteUrl, route.filename);
+    case 'github-user':
+      return showGithubUser(ctx, route.user);
+    case 'github-repo':
+      return showGithubRepo(ctx, route.user, route.repo);
+    case 'github-tree':
+      return showGithubTree(ctx, route);
+    case 'github-blob':
+      return showGithubBlob(ctx, route);
+    case 'gist':
+      return showGist(ctx, route.user, route.id, route.filename);
+    case 'gist-user':
+      return showGistUser(ctx, route.user);
     case 'notfound':
       showError(root, '404: Not Found', [
         'See the ',

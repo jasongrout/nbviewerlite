@@ -1,4 +1,4 @@
-import { link, showError } from './page.ts';
+import { addHeaderLink, link, showError } from './page.ts';
 
 export interface IConfig {
   /** Server-rendered nbviewer with the same URL scheme, or null. */
@@ -44,6 +44,17 @@ export function redirect(path: string): void {
   window.location.replace(
     viewerUrl(path) + window.location.search + window.location.hash
   );
+}
+
+/** Header link to the same page on the server-rendered nbviewer. */
+export function addNbviewerLink(ctx: IContext): void {
+  if (ctx.nbviewerPage) {
+    addHeaderLink(
+      ctx.nbviewerPage.url,
+      `View on ${ctx.nbviewerPage.label}`,
+      'launch'
+    );
+  }
 }
 
 export function setTitle(title: string): void {

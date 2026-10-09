@@ -1,6 +1,11 @@
 import type * as nbformat from '@jupyterlab/nbformat';
 
-import { type IContext, setTitle, showFailure } from './context.ts';
+import {
+  addNbviewerLink,
+  type IContext,
+  setTitle,
+  showFailure
+} from './context.ts';
 import { breadcrumbs, type ILink } from './listing.ts';
 import { rejoinLines } from './nbformat.ts';
 import {
@@ -66,7 +71,7 @@ export function parseNotebook(
   }
   if (typeof nb.nbformat === 'number' && nb.nbformat < 4) {
     throw new NotebookError(
-      `This notebook uses nbformat ${nb.nbformat}, which v2 does not render yet.`
+      `This notebook uses nbformat ${nb.nbformat}, which nbviewer lite does not render yet.`
     );
   }
   if (!Array.isArray(nb.cells)) {
@@ -136,9 +141,7 @@ export async function showNotebook(
   if (source.executorUrl) {
     addHeaderLink(source.executorUrl, 'Execute on Binder', 'launch');
   }
-  if (ctx.nbviewerPage) {
-    addHeaderLink(ctx.nbviewerPage.url, `View on ${ctx.nbviewerPage.label}`, 'launch');
-  }
+  addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');
 
   // Rendering code is a separate chunk, so listing, landing and error pages

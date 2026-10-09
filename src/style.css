@@ -145,3 +145,107 @@ a.nbv-link:hover {
 #nbviewer .jp-Notebook {
   padding: 0;
 }
+
+.nbv-listing-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.nbv-listing-header .nbv-breadcrumbs {
+  flex: 1;
+}
+
+.nbv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nbv-table th {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.nbv-table td {
+  padding: 6px 8px;
+  border-top: 1px solid #eeeeee;
+  vertical-align: top;
+}
+
+.nbv-table tbody tr:nth-child(odd) {
+  background: #fafafa;
+}
+
+.nbv-icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+}
+
+.nbv-page-links {
+  text-align: center;
+}
+
+.nbv-refmenu {
+  position: relative;
+}
+
+.nbv-refmenu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  font: inherit;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+.nbv-refmenu-popup {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  min-width: 280px;
+  max-width: 90vw;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nbv-refmenu-content {
+  display: flex;
+  gap: 16px;
+}
+
+.nbv-refmenu-list {
+  flex: 1;
+}
+
+.nbv-refmenu-list h2 {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #757575;
+}
+
+.nbv-refmenu-list ul {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nbv-refmenu-list a {
+  display: block;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.nbv-gist-description {
+  color: #616161;
+}

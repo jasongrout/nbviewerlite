@@ -8,10 +8,17 @@ the same `index.html` for every URL, and the app reads the path.
 Paths match nbviewer.org's, so changing the hostname is enough:
 
     /url/jakevdp.github.io/downloads/notebooks/XKCD_plots.ipynb
-    /urls/raw.githubusercontent.com/ipython/ipython/6.x/examples/IPython%20Kernel/Index.ipynb
+    /github/ipython/ipython/blob/6.x/examples/IPython%20Kernel/Index.ipynb
+    /github/ipython/ipython/tree/6.x/examples/
+    /github/ipython/
+    /gist/fperez/<gist id>
 
-Notebooks can only be fetched from hosts that allow cross-origin requests
-(CORS); when that fails, the page links to the same notebook on nbviewer.org.
+- `/url/` and `/urls/` fetch from any host that allows cross-origin requests
+  (CORS). When that fails, the page links to the same notebook on nbviewer.org.
+- GitHub notebooks load from raw.githubusercontent.com, without GitHub API
+  requests. Directory listings, repository and user pages, and gists use the
+  GitHub API, which allows 60 requests per hour per visitor IP.
+
 See [PLAN.md](PLAN.md) for the design and the roadmap.
 
 ## Development

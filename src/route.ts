@@ -2,10 +2,17 @@
  * Map viewer paths to what they show, following nbviewer's URL scheme and
  * route order (default_handlers in nbviewer/providers/{url,github,gist}):
  *
- *   url/{netloc}/{path}    http://{netloc}/{path}
- *   urls/{netloc}/{path}   https://{netloc}/{path}
+ *   url/{netloc}/{path}                      http://{netloc}/{path}
+ *   urls/{netloc}/{path}                     https://{netloc}/{path}
+ *   github/{user}/                           a user's repositories
+ *   github/{user}/{repo}/                    the repo's default branch
+ *   github/{user}/{repo}/tree/{ref}/{path}/  a directory listing
+ *   github/{user}/{repo}/blob/{ref}/{path}   a notebook (or file)
+ *   gist/{user}/{id}[/{file}]                a gist, or one of its files
+ *   gist/{user}/                             a user's gists
  *
- * A query string on the remote URL is carried as a final, percent-encoded
+ * plus nbviewer's redirects (trailing slashes, old URL forms). For url/urls,
+ * a query string on the remote URL is carried as a final, percent-encoded
  * path segment starting with "?" (see transform_ipynb_uri in nbviewer's
  * utils.py).
  */
@@ -17,21 +24,87 @@ export type Route =
   | { kind: 'redirect'; path: string }
   | {
       kind: 'url';
-      /** The remote URL as written in the viewer path. */
+      /** The remote URL as written in the nbviewer path. */
       remoteUrl: string;
       /** The last path segment, for page titles and download names. */
       filename: string;
-    };
+    }
+  | { kind: 'github-user'; user: string }
+  | { kind: 'github-repo'; user: string; repo: string }
+  | {
+      kind: 'github-tree' | 'github-blob';
+      user: string;
+      repo: string;
+      ref: string;
+      /** Path in the repo, decoded, without leading or trailing slash. */
+      path: string;
+    }
+  | {
+      kind: 'gist';
+      /** null when the URL has no user; nbviewer then redirects to the owner. */
+      user: string | null;
+      id: string;
+      /** Decoded file name, or '' for the whole gist. */
+      filename: string;
+    }
+  | { kind: 'gist-user'; user: string };
 
 const ENCODED_QUERY = /\/%3F/i;
+const GIST_ID = '([0-9]+|[0-9a-f]{20,})';
 
 type Matcher = [RegExp, (groups: string[], path: string) => Route];
+
+const addSlash = (_: string[], path: string) => redirect(path + '/');
+const removeSlash = (_: string[], path: string) =>
+  redirect(path.replace(/\/+$/, ''));
 
 /** Raw (percent-encoded) path pieces get decoded only where they are values. */
 const ROUTES: Matcher[] = [
   [/^index\.html$/, () => ({ kind: 'home' })],
+  // github provider: old URL forms caught under url/
+  [/^urls?\/github\.com\/(.*)$/, ([rest]) => redirect(`github/${rest}`)],
+  [
+    /^urls?\/raw\.?github(?:usercontent)?\.com\/([^/]+)\/([^/]+)\/(.*)$/,
+    ([user, repo, rest]) => redirect(`github/${user}/${repo}/blob/${rest}`)
+  ],
   // url provider
-  [/^url(s?)\/([^/]+)\/(.*)$/, urlRoute]
+  [/^url(s?)\/([^/]+)\/(.*)$/, urlRoute],
+  // github provider
+  [/^github\/([^/]+)$/, addSlash],
+  [/^github\/([^/]+)\/$/, ([user]) => ({ kind: 'github-user', user: dec(user) })],
+  [/^github\/([^/]+)\/([^/]+)$/, addSlash],
+  [
+    /^github\/([^/]+)\/([^/]+)\/$/,
+    ([user, repo]) => ({ kind: 'github-repo', user: dec(user), repo: dec(repo) })
+  ],
+  [/^github\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.*)\/$/, removeSlash],
+  [/^github\/([^/]+)\/([^/]+)\/tree\/([^/]+)$/, addSlash],
+  [
+    /^github\/([^/]+)\/([^/]+)\/tree\/([^/]+)\/(.*)$/,
+    (groups, path) =>
+      path.endsWith('/')
+        ? repoRoute('github-tree', groups)
+        : redirect(path + '/')
+  ],
+  [
+    /^github\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.*)$/,
+    groups => repoRoute('github-blob', groups)
+  ],
+  // gist provider
+  [
+    new RegExp(`^gist\\/([^/]+\\/)?${GIST_ID}$`),
+    ([user, id]) => gistRoute(user, id, '')
+  ],
+  [
+    new RegExp(`^gist\\/([^/]+\\/)?${GIST_ID}\\/(?:files\\/)?(.*)$`),
+    ([user, id, file]) => gistRoute(user, id, file)
+  ],
+  [new RegExp(`^${GIST_ID}$`), ([id]) => redirect(`gist/${id}`)],
+  [
+    new RegExp(`^${GIST_ID}\\/(.*)$`),
+    ([id, file]) => redirect(`gist/${id}/${file}`)
+  ],
+  [/^gist\/([^/]+)\/?$/, ([user]) => ({ kind: 'gist-user', user: dec(user) })]
 ];
 
 /**
@@ -64,6 +137,10 @@ function dec(s: string): string {
   return decodeURIComponent(s);
 }
 
+function redirect(path: string): Route {
+  return { kind: 'redirect', path };
+}
+
 function urlRoute([secure, netloc, rest]: string[]): Route {
   let urlPath = rest;
   let query = '';
@@ -77,9 +154,56 @@ function urlRoute([secure, netloc, rest]: string[]): Route {
   return { kind: 'url', remoteUrl, filename };
 }
 
+function repoRoute(
+  kind: 'github-tree' | 'github-blob',
+  [user, repo, ref, path]: string[]
+): Route {
+  return {
+    kind,
+    user: dec(user),
+    repo: dec(repo),
+    ref: dec(ref),
+    path: path.replace(/\/+$/, '').split('/').map(dec).join('/')
+  };
+}
+
+function gistRoute(user: string, id: string, file: string): Route {
+  return {
+    kind: 'gist',
+    user: user ? dec(user.replace(/\/$/, '')) : null,
+    id,
+    filename: dec(file)
+  };
+}
+
 /** Percent-encode each segment of a slash-separated path. */
 export function encodePath(path: string): string {
   return path.split('/').map(encodeURIComponent).join('/');
+}
+
+/** Viewer path of a GitHub directory listing or file. */
+export function githubPath(
+  view: 'tree' | 'blob',
+  user: string,
+  repo: string,
+  ref: string,
+  path: string
+): string {
+  const base = `github/${enc(user)}/${enc(repo)}/${view}/${enc(ref)}/`;
+  if (view === 'tree') {
+    return path ? `${base}${encodePath(path)}/` : base;
+  }
+  return base + encodePath(path);
+}
+
+/** Viewer path of a gist, or of one file in it. */
+export function gistPath(user: string, id: string, filename = ''): string {
+  const base = `gist/${enc(user)}/${id}`;
+  return filename ? `${base}/${enc(filename)}` : base;
+}
+
+function enc(s: string): string {
+  return encodeURIComponent(s);
 }
 
 /**

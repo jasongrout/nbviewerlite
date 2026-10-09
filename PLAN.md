@@ -123,7 +123,7 @@ iframe (phase 4).
 
 ## Phases
 
-### Phase 1 (minimal): static site, `/url/` and `/urls/`
+### Phase 1 (minimal): static site, `/url/` and `/urls/` (done)
 
 - Repo setup: rspack build into `dist/`; `index.html` generated with
   absolute, content-hashed asset URLs; `_redirects`, `_headers`,
@@ -143,7 +143,7 @@ iframe (phase 4).
 - Landing page with a URL form that maps input like nbviewer's front page does.
 - Unit tests (node) for routing, rewrites and normalization.
 
-### Phase 2: GitHub and gists
+### Phase 2: GitHub and gists (done)
 
 Same behavior as nbviewer's GitHub and gist providers:
 
