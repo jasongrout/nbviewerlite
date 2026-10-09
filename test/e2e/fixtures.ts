@@ -687,3 +687,152 @@ export const test = base.extend<IFixtures>({
     { auto: true }
   ]
 });
+
+// ---------------------------------------------------------------------------
+// Saved ipywidgets state
+// ---------------------------------------------------------------------------
+
+/** Widget-view outputs refer to a model in the notebook's widget state. */
+const WIDGET_VIEW = 'application/vnd.jupyter.widget-view+json';
+const WIDGET_STATE = 'application/vnd.jupyter.widget-state+json';
+
+/** Module versions in the state that ipywidgets 8 and 7 save. */
+const WIDGET_MODULES = {
+  8: { base: '2.0.0', controls: '2.0.0', output: '1.0.0' },
+  7: { base: '1.2.0', controls: '1.5.0', output: '1.0.0' }
+};
+
+type Module = [name: string, version: string];
+
+/** How a model's traits refer to another model. */
+export function widgetRef(id: string): string {
+  return `IPY_MODEL_${id}`;
+}
+
+/** A widget-view output for model `id`, with its text representation. */
+export function widgetView(id: string, text: string): Json {
+  return displayData({
+    [WIDGET_VIEW]: { model_id: id, version_major: 2, version_minor: 0 },
+    'text/plain': text
+  });
+}
+
+/**
+ * Widget state as Jupyter saves it in a notebook's metadata ("Save Widget
+ * State"), a model at a time. Models get their traits' defaults, so only
+ * what matters needs saying:
+ *
+ *   const widgets = new WidgetState();
+ *   const slider = widgets.control('IntSlider', { value: 3 }, 'SliderStyle');
+ *   notebook([code('slider', [widgetView(slider, 'IntSlider(value=3)')])],
+ *            widgets.metadata());
+ */
+export class WidgetState {
+  /** Model states by id. */
+  readonly models: Record<string, Json> = {};
+  private readonly base: Module;
+  private readonly controls: Module;
+  private readonly outputs: Module;
+
+  /** State as ipywidgets `version` (8 or 7) saves it. */
+  constructor(version: 7 | 8 = 8) {
+    const modules = WIDGET_MODULES[version];
+    this.base = ['@jupyter-widgets/base', modules.base];
+    this.controls = ['@jupyter-widgets/controls', modules.controls];
+    this.outputs = ['@jupyter-widgets/output', modules.output];
+  }
+
+  /**
+   * Add a model of class `model` from `module`, shown by class `view` from
+   * `viewModule` (null: it has no view); returns its id.
+   */
+  model(
+    [module, version]: Module,
+    model: string,
+    [viewModule, viewVersion]: Module,
+    view: string | null,
+    state: Json = {}
+  ): string {
+    const n = Object.keys(this.models).length;
+    const id = fakeSha('widget model', String(n)).slice(0, 32);
+    this.models[id] = {
+      model_module: module,
+      model_module_version: version,
+      model_name: model,
+      state: {
+        _model_module: module,
+        _model_module_version: version,
+        _model_name: model,
+        _view_module: viewModule,
+        _view_module_version: viewVersion,
+        _view_name: view,
+        ...state
+      }
+    };
+    return id;
+  }
+
+  /** A widget's layout (its CSS: width, border, ...). */
+  layout(state: Json = {}): string {
+    return this.model(this.base, 'LayoutModel', this.base, 'LayoutView', state);
+  }
+
+  /**
+   * One of ipywidgets' controls: `name` is its Python class ('IntSlider',
+   * 'HBox', ...), shown by `${name}View` unless `state` names another
+   * `_view_name` (IntProgress: 'ProgressView'); `style` is its style's
+   * class ('SliderStyle'), if it has one.
+   */
+  control(name: string, state: Json = {}, style?: string): string {
+    const styleRef = style
+      ? {
+          style: widgetRef(
+            this.model(this.controls, `${style}Model`, this.base, 'StyleView')
+          )
+        }
+      : {};
+    return this.model(
+      this.controls,
+      `${name}Model`,
+      this.controls,
+      `${name}View`,
+      {
+        _dom_classes: [],
+        layout: widgetRef(this.layout()),
+        ...styleRef,
+        ...state
+      }
+    );
+  }
+
+  /** An Output widget showing `outputs` (notebook outputs). */
+  output(outputs: Json[]): string {
+    return this.model(this.outputs, 'OutputModel', this.outputs, 'OutputView', {
+      _dom_classes: [],
+      layout: widgetRef(this.layout()),
+      msg_id: '',
+      outputs
+    });
+  }
+
+  /** jslink((source, trait), (target, trait)). */
+  link(source: [string, string], target: [string, string]): string {
+    return this.model(this.controls, 'LinkModel', this.controls, null, {
+      source: [widgetRef(source[0]), source[1]],
+      target: [widgetRef(target[0]), target[1]]
+    });
+  }
+
+  /** Notebook metadata with this state. */
+  metadata(): Json {
+    return {
+      widgets: {
+        [WIDGET_STATE]: {
+          version_major: 2,
+          version_minor: 0,
+          state: this.models
+        }
+      }
+    };
+  }
+}
