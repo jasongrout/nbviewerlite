@@ -6,6 +6,7 @@ import {
   setTitle,
   showFailure
 } from './context.ts';
+import { upgradeNotebook } from './convert.ts';
 import { breadcrumbs, type ILink } from './listing.ts';
 import { normalizeNotebook } from './nbformat.ts';
 import {
@@ -70,9 +71,13 @@ export function parseNotebook(
     throw new NotebookError(`${name} is not a valid notebook.`);
   }
   if (typeof nb.nbformat === 'number' && nb.nbformat < 4) {
-    throw new NotebookError(
-      `This notebook uses nbformat ${nb.nbformat}, which nbviewer lite does not render yet.`
-    );
+    try {
+      nb = upgradeNotebook(nb);
+    } catch (err) {
+      throw new NotebookError(
+        `${name} is not a valid notebook (${(err as Error).message}).`
+      );
+    }
   }
   if (!Array.isArray(nb.cells)) {
     throw new NotebookError(`${name} is not a valid notebook (no cells).`);

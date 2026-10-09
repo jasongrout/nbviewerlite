@@ -1,0 +1,66 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "# Title\n\nLines from splitlines()"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "<p>html</p>"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "3.14\n15"
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": "a\nb"
+    },
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGA\nWjR9awAAAABJRU5ErkJggg==\n",
+      "text/plain": "<Figure>"
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "etype": "NameError",
+     "evalue": "name 'y' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "NameError: name 'y' is not defined"
+     ]
+    }
+   ],
+   "source": "import math\nmath.pi"
+  }
+ ],
+ "metadata": {
+  "authors": [
+   {
+    "name": "Someone"
+   }
+  ],
+  "created": "2012-01-01",
+  "orig_nbformat": 2,
+  "orig_nbformat_minor": 0,
+  "saved": "2012-01-02"
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
