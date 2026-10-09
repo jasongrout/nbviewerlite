@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { normalizeNotebook, withoutViewState } from '../src/nbformat.ts';
+import { normalizeNotebook } from '../src/nbformat.ts';
 
 test('normalizeNotebook joins sources, streams, and non-JSON mime data', () => {
   const nb = {
@@ -85,41 +85,4 @@ test('normalizeNotebook drops transient metadata and fills in missing fields', (
   assert.deepEqual(out.cells[1].outputs[1].data, {});
   assert.deepEqual(out.cells[2].outputs, []);
   assert.deepEqual(normalizeNotebook({ nbformat: 4, cells: [] }).metadata, {});
-});
-
-test('withoutViewState shows hidden inputs, outputs and headings', () => {
-  const nb = {
-    nbformat: 4,
-    nbformat_minor: 5,
-    metadata: { kernelspec: { name: 'python3' } },
-    cells: [
-      {
-        cell_type: 'code',
-        source: '1',
-        metadata: {
-          collapsed: true,
-          scrolled: true,
-          jupyter: { source_hidden: true, outputs_hidden: true },
-          tags: ['keep']
-        },
-        outputs: []
-      },
-      {
-        cell_type: 'markdown',
-        source: '# A',
-        metadata: { heading_collapsed: true, jupyter: { other: 1 } }
-      },
-      { cell_type: 'raw', source: 'r' }
-    ]
-  };
-  const original = structuredClone(nb);
-  assert.deepEqual(withoutViewState(nb), {
-    ...nb,
-    cells: [
-      { ...nb.cells[0], metadata: { tags: ['keep'] } },
-      { ...nb.cells[1], metadata: { jupyter: { other: 1 } } },
-      { ...nb.cells[2], metadata: {} }
-    ]
-  });
-  assert.deepEqual(nb, original);
 });

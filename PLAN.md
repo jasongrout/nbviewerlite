@@ -207,6 +207,12 @@ Same behavior as nbviewer's GitHub and gist providers:
 
 ### Phase 3: format and output parity (done)
 
+- Notebooks render as JupyterLab shows them, where that differs from
+  nbviewer.org: JupyterLab's renderers and their ranks, and the view state
+  saved in cell metadata (collapsed outputs and hidden inputs as expandable
+  placeholders, scrolled outputs). Not yet: collapsed headings
+  (`jp-MarkdownHeadingCollapsed`), which JupyterLab applies through its
+  table of contents.
 - nbformat 1, 2 and 3 notebooks upgrade to nbformat 4 in the browser
   (`src/convert.ts`): a port of Python nbformat's readers (`rejoin_lines`)
   and upgrades, tested against nbformat's own output. Code in notebooks

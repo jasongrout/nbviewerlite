@@ -85,35 +85,3 @@ export function normalizeNotebook(nb: any): any {
     })
   };
 }
-
-/**
- * Drop the view state that JupyterLab honors but nbconvert's lab template,
- * and so nbviewer.org, ignores: hidden inputs and outputs (collapsed,
- * jupyter.source_hidden, jupyter.outputs_hidden), scrolled outputs, and
- * collapsed headings. A viewer shows everything.
- */
-export function withoutViewState(nb: any): any {
-  return {
-    ...nb,
-    cells: nb.cells.map((cell: any) => {
-      const {
-        collapsed: _collapsed,
-        scrolled: _scrolled,
-        heading_collapsed: _headingCollapsed,
-        jupyter,
-        ...metadata
-      } = cell.metadata ?? {};
-      if (jupyter && typeof jupyter === 'object') {
-        const {
-          source_hidden: _sourceHidden,
-          outputs_hidden: _outputsHidden,
-          ...rest
-        } = jupyter;
-        if (Object.keys(rest).length) {
-          metadata.jupyter = rest;
-        }
-      }
-      return { ...cell, metadata };
-    })
-  };
-}

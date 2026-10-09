@@ -239,31 +239,40 @@ test('an error if the rendering code fails to load', async ({ page, web }) => {
   await expect(page.getByText('Loading notebook')).toHaveCount(0);
 });
 
-test('hidden inputs and outputs show, as on nbviewer.org', async ({
+test('view state saved in the notebook, as JupyterLab shows it', async ({
   page,
   web
 }) => {
-  // view state that JupyterLab honors and nbconvert's template ignores
   const withMetadata = (cell: any, metadata: object) => ({ ...cell, metadata });
   const lines = Array.from({ length: 100 }, (_, i) => `line ${i}\n`).join('');
   await open(
     page,
     web,
     notebook([
-      withMetadata(markdown('# Folded section'), { heading_collapsed: true }),
       withMetadata(code('print(1)', [stream('collapsed output\n')]), {
         collapsed: true
       }),
-      withMetadata(code('print(2)', [stream('hidden output\n')]), {
-        jupyter: { source_hidden: true, outputs_hidden: true }
+      withMetadata(code('secret = 2', [stream('shown output\n')]), {
+        jupyter: { source_hidden: true }
       }),
       withMetadata(code('print(3)', [stream(lines)]), { scrolled: true })
     ])
   );
-  await expect(page.getByText('collapsed output')).toBeVisible();
-  await expect(page.getByText('print(2)')).toBeVisible();
-  await expect(page.getByText('hidden output')).toBeVisible();
-  // the whole output, not a scrolling box a few lines high
+  const cell = (text: string) =>
+    page.locator('.jp-Cell').filter({ hasText: text });
+
+  // Collapsed outputs and hidden inputs are placeholders (showing their
+  // first line) that expand.
+  const outputs = cell('print(1)').locator('.jp-OutputArea');
+  await expect(outputs).toBeHidden();
+  await cell('print(1)').getByTitle('Click to expand').click();
+  await expect(outputs).toHaveText('collapsed output');
+  const editor = cell('shown output').locator('.cm-content');
+  await expect(editor).toBeHidden();
+  await cell('shown output').getByTitle('Click to expand').click();
+  await expect(editor).toHaveText('secret = 2');
+
+  // a scrolled output is a box a few lines high
   const long = page.locator('.jp-OutputArea').filter({ hasText: 'line 99' });
-  expect((await long.boundingBox())?.height).toBeGreaterThan(1000);
+  expect((await long.boundingBox())?.height).toBeLessThan(1000);
 });
