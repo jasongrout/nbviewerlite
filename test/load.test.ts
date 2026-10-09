@@ -22,6 +22,9 @@ function withoutIds(nb: any): any {
 // Upgraded as Python nbformat does (see convert.test.ts for the fixtures).
 const upgraded = {
   v1: 'nbformat 1',
+  // written by nbformat.v1.nbjson.writes, which has no nbformat key; Python
+  // nbformat reads notebooks without one as nbformat 1
+  'v1-nokey': 'nbformat 1 (no nbformat key)',
   v2: 'nbformat 2',
   'v3-cells': 'nbformat 3'
 };

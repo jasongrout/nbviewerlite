@@ -1,6 +1,7 @@
 /**
- * Notebooks in nbformat 3 (IPython 1 and 2), which the browser upgrades to
- * nbformat 4 as nbviewer.org does with nbformat.reads(..., as_version=4).
+ * Notebooks in nbformat 3 (IPython 1 and 2) and older, which the browser
+ * upgrades to nbformat 4 as nbviewer.org does with
+ * nbformat.reads(..., as_version=4).
  */
 
 import { createHash } from 'node:crypto';
@@ -238,4 +239,27 @@ test('heading cells, outputs and a traceback in nbformat 3', async ({
 
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('an nbformat 1 notebook, which has no nbformat key', async ({
+  page,
+  web
+}) => {
+  // as nbformat's v1 writer saved them: text and code cells
+  web.file(
+    'https://nb.example/v1.ipynb',
+    readFileSync('test/fixtures/v1-nokey.ipynb', 'utf8')
+  );
+  await page.goto('/urls/nb.example/v1.ipynb');
+
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'nbformat 1' })
+  ).toBeVisible();
+  await expect(page.getByText('v1', { exact: true })).toBeVisible();
+  const cells = page.locator('.jp-CodeCell');
+  await expect(cells).toHaveCount(2);
+  await expect(cells.first().getByText('[3]:')).toBeVisible();
+  await expect(cells.first()).toContainText('x = 1');
+  await expect(cells.last()).toContainText('print(x)');
+  await expect(page.locator('.jp-RawCell')).toHaveCount(0);
 });

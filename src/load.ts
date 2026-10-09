@@ -49,6 +49,25 @@ export async function fetchText(url: string): Promise<string> {
 }
 
 /**
+ * Whether notebook JSON without an nbformat key is an nbformat 1 notebook,
+ * which never had one. Python nbformat reads every notebook without the key
+ * as nbformat 1; here only ones whose cells are all nbformat 1 cells do, so
+ * nbformat 4 notebooks that lost the key still show their cells.
+ */
+function isV1(nb: any): boolean {
+  if (nb.nbformat !== undefined || !Array.isArray(nb.cells)) {
+    return false;
+  }
+  const v1Cell = (cell: any) =>
+    (cell?.cell_type === 'text' || cell?.cell_type === 'code') &&
+    !('source' in cell);
+  return (
+    nb.cells.every(v1Cell) &&
+    nb.cells.some((cell: any) => cell.cell_type === 'text' || 'code' in cell)
+  );
+}
+
+/**
  * Notebook JSON of nbformat 1 to 4, as nbformat 4 with what JupyterLab
  * expects filled in. `name` names the notebook in errors.
  */
@@ -64,6 +83,9 @@ export function parseNotebook(
   }
   if (typeof nb !== 'object' || nb === null) {
     throw new LoadError(`${name} is not a valid notebook.`);
+  }
+  if (isV1(nb)) {
+    nb = { ...nb, nbformat: 1 };
   }
   if (typeof nb.nbformat === 'number' && nb.nbformat < 4) {
     try {
