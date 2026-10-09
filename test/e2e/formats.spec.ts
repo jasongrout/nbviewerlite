@@ -374,6 +374,57 @@ test.describe('format/slides/', () => {
     await expect(slideNumber(page)).toHaveText('1 / 3', { timeout: 3000 });
   });
 
+  test('keys that widget controls use stay with them', async ({
+    page,
+    web
+  }) => {
+    const widgets = new WidgetState();
+    const slider = widgets.control(
+      'IntSlider',
+      { value: 3, max: 10, description: 'Level' },
+      'SliderStyle'
+    );
+    const dropdown = widgets.control(
+      'Dropdown',
+      {
+        _options_labels: ['one', 'two', 'three'],
+        index: 1,
+        description: 'Pick'
+      },
+      'DescriptionStyle'
+    );
+    web.file(
+      `${BASE}/controls.ipynb`,
+      notebook(
+        [
+          slide('slide', markdown('# Controls')),
+          code('slider', [widgetView(slider, 'IntSlider(value=3)')]),
+          code('dropdown', [widgetView(dropdown, 'Dropdown(index=1)')]),
+          slide('slide', markdown('# After the controls'))
+        ],
+        { ...PYTHON, ...widgets.metadata() }
+      )
+    );
+    await page.goto('/format/slides/urls/nb.example/controls.ipynb');
+    const level = page.getByRole('slider');
+    await expect(level).toHaveAttribute('aria-valuenow', '3.0');
+    const pick = page.getByRole('combobox', { name: 'Pick' });
+    await expect(pick).toHaveValue('two');
+
+    // the slider takes the arrow keys, and the dropdown too
+    await level.press('ArrowRight');
+    await expect(slideNumber(page)).toHaveText('1 / 2');
+    await expect(level).toHaveAttribute('aria-valuenow', '4.0');
+    await pick.press('ArrowDown');
+    await expect(pick).toHaveValue('three');
+    await expect(slideNumber(page)).toHaveText('1 / 2');
+
+    // elsewhere, they change slides
+    await page.getByRole('heading', { name: 'Controls' }).click();
+    await page.keyboard.press('ArrowRight');
+    await expect(slideNumber(page)).toHaveText('2 / 2');
+  });
+
   test('speaker notes in the speaker view', async ({ page, context }) => {
     await page.goto('/format/slides/urls/nb.example/deck.ipynb');
     await expect(slideNumber(page)).toHaveText('1 / 3');

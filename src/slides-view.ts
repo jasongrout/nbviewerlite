@@ -80,7 +80,8 @@ export async function showSlides(
     mobileViewDistance: Infinity,
     // No switch to the scroll view on narrow screens: switching back
     // rebuilds the slides from their HTML, losing the outputs' state.
-    scrollActivationWidth: 0
+    scrollActivationWidth: 0,
+    keyboardCondition: changesSlides
   });
   await presentation.initialize();
 
@@ -96,6 +97,23 @@ export async function showSlides(
   for (const node of nodes) {
     observer.observe(node);
   }
+}
+
+/**
+ * Whether reveal.js acts on a key. It leaves out keys typed into text
+ * fields; keys that a widget control used (a slider's arrows) or that go to
+ * a dropdown stay with them too. Read-only code still lets the keys through,
+ * though CodeMirror moves its selection with them.
+ */
+function changesSlides(event: KeyboardEvent): boolean {
+  const target = event.target;
+  if (target instanceof HTMLSelectElement) {
+    return false;
+  }
+  return (
+    !event.defaultPrevented ||
+    (target instanceof Element && target.closest('.cm-editor') !== null)
+  );
 }
 
 /** The reveal template's sections, with the cells' nodes in them. */
