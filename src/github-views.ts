@@ -5,6 +5,7 @@
 
 import {
   addNbviewerLink,
+  contentLink,
   type IContext,
   redirect,
   setTitle,
@@ -124,10 +125,13 @@ export async function showGithubBlob(
   const filename = path.split('/').pop() ?? path;
   const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 
-  // Relative links: files in the repo open through this view, like in nbviewer.
+  // Relative links: files in the repo open through this view, like in
+  // nbviewer, notebooks and HTML files in the page's format.
   const viewerLink = (url: string) => {
     const target = repoViewerPath(url, user, repo, ref);
-    return target === null ? null : viewerUrl(target);
+    return target === null
+      ? null
+      : contentLink(ctx, target, new URL(url).pathname);
   };
 
   if (isHtmlFile(path)) {

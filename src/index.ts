@@ -1,6 +1,7 @@
 import jQuery from 'jquery';
 
 import {
+  contentLink,
   createContext,
   type IContext,
   readConfig,
@@ -37,9 +38,12 @@ async function showUrl(
 
   // Like nbviewer: a relative link from a url/urls notebook to a
   // non-notebook file opens the file itself rather than trying to render it.
+  // Also in other formats, where nbviewer's test misses these links.
   if (
     !/\.ipynb$/i.test(filename) &&
-    document.referrer.startsWith(window.location.origin + '/url')
+    document.referrer.startsWith(
+      `${window.location.origin}/${ctx.formatPrefix}url`
+    )
   ) {
     window.location.replace(url);
     return;
@@ -49,10 +53,9 @@ async function showUrl(
     url,
     title: filename,
     linkFor: absolute => {
-      const path = /\.ipynb$/i.test(new URL(absolute).pathname)
-        ? viewerPath(absolute)
-        : null;
-      return path === null ? absolute : viewerUrl(path);
+      const { pathname } = new URL(absolute);
+      const path = /\.ipynb$/i.test(pathname) ? viewerPath(absolute) : null;
+      return path === null ? absolute : contentLink(ctx, path, pathname);
     }
   });
 }

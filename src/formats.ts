@@ -38,6 +38,17 @@ export function hasSlides(nb: nbformat.INotebookContent): boolean {
   return false;
 }
 
+/**
+ * Whether a link from a notebook or HTML file on a format/{name}/ page to
+ * the file at `path` (a name or URL path) stays in the format. nbviewer.org
+ * leaves these links relative, so notebooks open in the page's format, and
+ * HTML files pass it on to their own links; nbviewer redirects directories
+ * to their listing without it, and serves other files as they are.
+ */
+export function keepsFormat(path: string): boolean {
+  return /\.(ipynb|html?)$/i.test(path);
+}
+
 export interface IFormatLink {
   /** Viewer path. */
   path: string;

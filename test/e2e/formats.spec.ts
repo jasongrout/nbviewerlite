@@ -461,3 +461,183 @@ test.describe('format URLs', () => {
     });
   }
 });
+
+test.describe('links on format/slides/ pages', () => {
+  // nbviewer.org leaves relative links in notebooks and HTML files as they
+  // are, so they resolve against the page's format/{name}/ URL.
+
+  /** The deck the others link to. */
+  const part2 = notebook([slide('slide', markdown('# Part two'))]);
+
+  /** A deck whose first slide has the links in `text`. */
+  function linking(title: string, text: string) {
+    return notebook([slide('slide', markdown(`# ${title}\n\n${text}`))]);
+  }
+
+  /** The link named `name`. */
+  function link(page: Page, name: string): Locator {
+    return page.getByRole('link', { name, exact: true });
+  }
+
+  test('to notebooks and HTML files in a repository keep the format', async ({
+    page,
+    github
+  }) => {
+    github.files('u', 'r', 'main', {
+      'deck.ipynb': linking(
+        'Repository deck',
+        '[next deck](part2.ipynb), [the report](docs/report.html), ' +
+          '[the docs](docs/), [the data](data.csv)'
+      ),
+      'part2.ipynb': part2,
+      'docs/report.html': '<h1>Report</h1>',
+      'data.csv': 'a,b\n1,2\n'
+    });
+    await page.goto('/format/slides/github/u/r/blob/main/deck.ipynb');
+    const blob = '/github/u/r/blob/main';
+    await expect(link(page, 'next deck')).toHaveAttribute(
+      'href',
+      `/format/slides${blob}/part2.ipynb`
+    );
+    // HTML files pass the format on to their own links
+    await expect(link(page, 'the report')).toHaveAttribute(
+      'href',
+      `/format/slides${blob}/docs/report.html`
+    );
+    // nbviewer redirects directories to their listing without the format,
+    // and serves other files as they are; breadcrumbs leave it out too
+    await expect(link(page, 'the docs')).toHaveAttribute(
+      'href',
+      '/github/u/r/tree/main/docs/'
+    );
+    await expect(link(page, 'the data')).toHaveAttribute(
+      'href',
+      `${blob}/data.csv`
+    );
+    await expect(
+      page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('link')
+    ).toHaveAttribute('href', '/github/u/r/tree/main/');
+
+    await link(page, 'next deck').click();
+    await expect(page).toHaveURL(`/format/slides${blob}/part2.ipynb`);
+    await expect(page.getByRole('heading', { name: 'Part two' })).toBeVisible();
+    await expect(page.locator('.reveal .slide-number')).toHaveText('1 / 1');
+  });
+
+  test('to notebooks in an HTML file keep the format', async ({
+    page,
+    github
+  }) => {
+    github.files('u', 'r', 'main', {
+      'docs/report.html':
+        '<!DOCTYPE html><title>Report</title><h1>Report</h1>' +
+        '<a href="../deck.ipynb">the deck</a> ' +
+        '<a href="../">the repository</a>',
+      'deck.ipynb': part2
+    });
+    await page.goto('/format/slides/github/u/r/blob/main/docs/report.html');
+    const app = new URL(page.url()).origin;
+    const frame = page.locator('iframe[title="report.html"]').contentFrame();
+    await expect(frame.getByRole('link', { name: 'the deck' })).toHaveAttribute(
+      'href',
+      `${app}/format/slides/github/u/r/blob/main/deck.ipynb`
+    );
+    await expect(
+      frame.getByRole('link', { name: 'the repository' })
+    ).toHaveAttribute('href', `${app}/github/u/r/tree/main/`);
+
+    await frame.getByRole('link', { name: 'the deck' }).click();
+    await expect(page).toHaveURL(
+      '/format/slides/github/u/r/blob/main/deck.ipynb'
+    );
+    await expect(page.getByRole('heading', { name: 'Part two' })).toBeVisible();
+    await expect(page.locator('.reveal .slide-number')).toHaveText('1 / 1');
+  });
+
+  test('to notebooks and HTML files in a gist keep the format', async ({
+    page,
+    github
+  }) => {
+    const id = '0123456789abcdef0123';
+    const gist = github.gist({
+      id,
+      owner: 'fperez',
+      files: {
+        'deck.ipynb': linking(
+          'Gist deck',
+          '[next deck](part2.ipynb), [the page](page.html), ' +
+            '[the script](helper.py)'
+        ),
+        'part2.ipynb': part2,
+        'page.html': '<h1>Page</h1>',
+        'helper.py': 'x = 1\n'
+      }
+    });
+    await page.goto(`/format/slides/gist/fperez/${id}/deck.ipynb`);
+    await expect(link(page, 'next deck')).toHaveAttribute(
+      'href',
+      `/format/slides/gist/fperez/${id}/part2.ipynb`
+    );
+    await expect(link(page, 'the page')).toHaveAttribute(
+      'href',
+      `/format/slides/gist/fperez/${id}/page.html`
+    );
+    const files = gist.files as Record<string, { raw_url: string }>;
+    await expect(link(page, 'the script')).toHaveAttribute(
+      'href',
+      files['helper.py'].raw_url
+    );
+
+    await link(page, 'next deck').click();
+    await expect(page).toHaveURL(
+      `/format/slides/gist/fperez/${id}/part2.ipynb`
+    );
+    await expect(page.getByRole('heading', { name: 'Part two' })).toBeVisible();
+  });
+
+  test('to notebooks on a url/ page keep the format', async ({ page, web }) => {
+    web.file(
+      `${BASE}/decks/deck.ipynb`,
+      linking(
+        'Remote deck',
+        '[next deck](sub/part2.ipynb), [the folder](sub/), ' +
+          '[the data](data.csv)'
+      )
+    );
+    web.file(`${BASE}/decks/sub/part2.ipynb`, part2);
+    await page.goto('/format/slides/urls/nb.example/decks/deck.ipynb');
+    await expect(link(page, 'next deck')).toHaveAttribute(
+      'href',
+      '/format/slides/urls/nb.example/decks/sub/part2.ipynb'
+    );
+    await expect(link(page, 'the folder')).toHaveAttribute(
+      'href',
+      `${BASE}/decks/sub/`
+    );
+    await expect(link(page, 'the data')).toHaveAttribute(
+      'href',
+      `${BASE}/decks/data.csv`
+    );
+
+    await link(page, 'next deck').click();
+    await expect(page).toHaveURL(
+      '/format/slides/urls/nb.example/decks/sub/part2.ipynb'
+    );
+    await expect(page.getByRole('heading', { name: 'Part two' })).toBeVisible();
+  });
+
+  test('to other files, followed from a url/ page, open the file', async ({
+    page,
+    web,
+    baseURL
+  }) => {
+    // as relative links that the viewer can't rewrite (in a widget, say)
+    // resolve against the page
+    web.file(`${BASE}/decks/data.csv`, 'a,b\n1,2\n');
+    await page.goto('/format/slides/urls/nb.example/decks/data.csv', {
+      referer: `${baseURL}/format/slides/urls/nb.example/decks/deck.ipynb`
+    });
+    await expect(page).toHaveURL(`${BASE}/decks/data.csv`);
+    await expect(page.getByText('a,b')).toBeVisible();
+  });
+});

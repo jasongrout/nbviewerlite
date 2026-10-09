@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { formatLinks, hasSlides } from '../src/formats.ts';
+import { formatLinks, hasSlides, keepsFormat } from '../src/formats.ts';
 
 function notebook(...metadata: object[]): any {
   return {
@@ -57,4 +57,14 @@ test('"View as" links go to the other formats, in nbviewer\'s order', () => {
     'View as Notebook',
     'View as Code'
   ]);
+});
+
+test('links to notebooks and HTML files stay in the format', () => {
+  for (const path of ['a.ipynb', 'docs/B.IPYNB', 'r.html', '/u/r/main/R.HTM']) {
+    assert.equal(keepsFormat(path), true, path);
+  }
+  // directories and other files
+  for (const path of ['docs/', 'data.csv', 'Makefile', 'a.ipynb.bak', '']) {
+    assert.equal(keepsFormat(path), false, path);
+  }
 });

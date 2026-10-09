@@ -1,3 +1,4 @@
+import { keepsFormat } from './formats.ts';
 import { addHeaderLink, link, showError } from './page.ts';
 import { type Format, splitFormat } from './route.ts';
 
@@ -25,6 +26,8 @@ export interface IContext {
   format: Format;
   /** The viewer path without its format/{name}/ prefix. */
   formatBase: string;
+  /** That prefix (e.g. 'format/slides/'), or '' for paths without one. */
+  formatPrefix: string;
   /** The same page on the server-rendered nbviewer, if configured. */
   nbviewerPage: { url: string; label: string } | null;
 }
@@ -35,12 +38,13 @@ export function createContext(root: HTMLElement, config: IConfig): IContext {
     format: 'html',
     base: path
   };
+  const formatPrefix = path.slice(0, path.length - formatBase.length);
   let nbviewerPage = null;
   if (config.nbviewerUrl) {
     const base = config.nbviewerUrl.replace(/\/?$/, '/');
     nbviewerPage = { url: base + path, label: new URL(base).host };
   }
-  return { root, config, path, format, formatBase, nbviewerPage };
+  return { root, config, path, format, formatBase, formatPrefix, nbviewerPage };
 }
 
 function currentPath(): string {
@@ -50,6 +54,15 @@ function currentPath(): string {
 /** The URL of a viewer path (no leading slash). */
 export function viewerUrl(path: string): string {
   return '/' + path;
+}
+
+/**
+ * The URL of a link from a notebook or HTML file to viewer path `path`,
+ * which shows the file at `file` (a name or URL path): in the page's
+ * format, as on nbviewer.org, if keepsFormat says so.
+ */
+export function contentLink(ctx: IContext, path: string, file: string): string {
+  return viewerUrl((keepsFormat(file) ? ctx.formatPrefix : '') + path);
 }
 
 /**

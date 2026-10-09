@@ -5,6 +5,7 @@
 
 import {
   addNbviewerLink,
+  contentLink,
   type IContext,
   redirect,
   setTitle,
@@ -100,11 +101,13 @@ export async function showGist(
       ? gist.files[target]
       : null;
   };
-  // Notebooks and HTML files in the gist open in the viewer.
+  // Notebooks and HTML files in the gist open in the viewer, in the page's
+  // format.
   const viewerLink = (url: string) => {
     const target = fileFor(url)?.filename;
     return target && (target.endsWith('.ipynb') || isHtmlFile(target))
-      ? viewerUrl(gistPath(user, gist.id, target)) + new URL(url).hash
+      ? contentLink(ctx, gistPath(user, gist.id, target), target) +
+          new URL(url).hash
       : null;
   };
 
