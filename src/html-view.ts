@@ -26,7 +26,7 @@ import {
   ResourceLoader
 } from './html.ts';
 import { breadcrumbs, type ILink } from './listing.ts';
-import { fetchText, NotebookError } from './notebook-view.ts';
+import { fetchText, LoadError } from './load.ts';
 import { addHeaderLink, h, link, showStatus } from './page.ts';
 
 export interface IHtmlSource {
@@ -85,14 +85,14 @@ export async function showHtml(
     srcdoc = await frameDocument(text, source);
   } catch (err) {
     if (
-      err instanceof NotebookError &&
+      err instanceof LoadError &&
       err.status === 404 &&
       source.onNotFound &&
       (await source.onNotFound())
     ) {
       return;
     }
-    const details = err instanceof NotebookError ? err.details : [];
+    const details = err instanceof LoadError ? err.details : [];
     showFailure(ctx, err, elsewhere, ...details);
     return;
   }
