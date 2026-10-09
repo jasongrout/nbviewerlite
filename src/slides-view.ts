@@ -69,7 +69,7 @@ export async function showSlides(
 
   slides.append(...deckElements(deck, nodes));
 
-  await new Reveal(reveal, {
+  const presentation = new Reveal(reveal, {
     embedded: true,
     hash: true,
     slideNumber: 'c/t',
@@ -81,7 +81,21 @@ export async function showSlides(
     // No switch to the scroll view on narrow screens: switching back
     // rebuilds the slides from their HTML, losing the outputs' state.
     scrollActivationWidth: 0
-  }).initialize();
+  });
+  await presentation.initialize();
+
+  // reveal.js centers each slide by its height when it lays out the deck,
+  // which it does on navigation and window resizes. Outputs that render
+  // later (widgets, Vega, images) change that height: lay the deck out
+  // again, at most once a frame, or the bottom of the slide is cut off.
+  let frame = 0;
+  const observer = new ResizeObserver(() => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => presentation.layout());
+  });
+  for (const node of nodes) {
+    observer.observe(node);
+  }
 }
 
 /** The reveal template's sections, with the cells' nodes in them. */

@@ -10,6 +10,7 @@ import type { Locator, Page } from '@playwright/test';
 
 import {
   code,
+  displayData,
   expect,
   headerLinks,
   links,
@@ -17,7 +18,10 @@ import {
   notebook,
   stream,
   test,
-  textColor
+  textColor,
+  widgetRef,
+  WidgetState,
+  widgetView
 } from './fixtures.ts';
 
 const BASE = 'https://nb.example';
@@ -410,6 +414,79 @@ test.describe('format/slides/', () => {
       ['Download Notebook', `${BASE}/analysis.ipynb`]
     ]);
   });
+
+  /** A slide with a title, `output`, and another output below it. */
+  function tallSlide(
+    output: Record<string, unknown>,
+    metadata: Record<string, unknown> = {}
+  ) {
+    return notebook(
+      [
+        slide('slide', markdown('# Tall slide')),
+        code('show()', [output]),
+        code('print("last")', [stream('the last output\n')])
+      ],
+      { ...PYTHON, ...metadata }
+    );
+  }
+
+  const widgets = new WidgetState();
+  const tallSlider = widgets.control(
+    'IntSlider',
+    {
+      value: 3,
+      description: 'Tall',
+      layout: widgetRef(widgets.layout({ height: '400px' }))
+    },
+    'SliderStyle'
+  );
+  const lateOutputs = {
+    'a Vega-Lite chart': [
+      tallSlide(
+        displayData({
+          'application/vnd.vegalite.v5+json': {
+            $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+            data: { values: [{ a: 'A', b: 28 }] },
+            mark: 'bar',
+            encoding: {
+              x: { field: 'a', type: 'nominal' },
+              y: { field: 'b', type: 'quantitative' }
+            },
+            height: 300
+          },
+          'text/plain': 'alt.Chart(...)'
+        })
+      ),
+      '.vega-embed canvas'
+    ],
+    'a widget': [
+      tallSlide(
+        widgetView(tallSlider, 'IntSlider(value=3)'),
+        widgets.metadata()
+      ),
+      '.widget-slider'
+    ]
+  } as const;
+
+  for (const [what, [nb, rendered]] of Object.entries(lateOutputs)) {
+    test(`the whole slide shows once ${what} has rendered`, async ({
+      page,
+      web
+    }) => {
+      web.file(`${BASE}/tall.ipynb`, nb);
+      await page.goto('/format/slides/urls/nb.example/tall.ipynb');
+      await expect(page.locator(rendered)).toBeVisible();
+      // reveal.js centers each slide in the deck, and this one grew after
+      // the deck was laid out
+      const bottom = async (locator: Locator) => {
+        const box = await locator.boundingBox();
+        return box ? box.y + box.height : Number.NaN;
+      };
+      const deckBottom = await bottom(page.locator('.reveal'));
+      const last = page.getByText('the last output', { exact: true });
+      await expect.poll(() => bottom(last)).toBeLessThanOrEqual(deckBottom);
+    });
+  }
 });
 
 test.describe('format URLs', () => {
