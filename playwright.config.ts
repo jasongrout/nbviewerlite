@@ -43,7 +43,11 @@ export default defineConfig({
           // redirect leads to, for one).
           args: [
             '--no-proxy-server',
-            '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost'
+            '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost',
+            // Chrome (not the headless shell) runs sandboxed frames, like
+            // the one HTML files show in, in a process of their own, and
+            // Playwright doesn't route their requests.
+            '--disable-features=IsolateSandboxedIframes'
           ]
         }
       }
