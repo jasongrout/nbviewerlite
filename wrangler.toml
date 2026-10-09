@@ -1,0 +1,8 @@
+# Cloudflare Pages configuration (see "Deployment" in README.md).
+#
+# The project name must match this one. Pages serves dist/: files as
+# themselves, viewer URLs as the app (rewrites in _redirects), and 404.html
+# (also the app) or static/404.html for other unknown paths.
+name = "nbviewerlite"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"

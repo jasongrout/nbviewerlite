@@ -1,0 +1,251 @@
+/* Page shell, in JupyterLab's light theme colors (index.html has the rest). */
+
+a {
+  color: #1976d2;
+}
+
+.nbv-brand-lite {
+  color: #f37726;
+}
+
+.nbv-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.nbv-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #616161;
+  text-decoration: none;
+}
+
+a.nbv-link:hover {
+  color: #212121;
+}
+
+.nbv-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.nbv-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.nbv-main {
+  min-height: 60vh;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.nbv-footer {
+  color: #757575;
+  font-size: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.nbv-status {
+  padding: 2em 0;
+  color: #757575;
+}
+
+.nbv-error {
+  margin: 2em 0;
+  padding: 12px 16px;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.nbv-error p {
+  margin: 0.5em 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* Landing page */
+
+.nbv-home {
+  max-width: 40em;
+  margin: 3em auto;
+}
+
+.nbv-home-form {
+  display: flex;
+  gap: 8px;
+}
+
+.nbv-home-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font: inherit;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+}
+
+.nbv-home-form button {
+  padding: 6px 14px;
+  font: inherit;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+
+.nbv-home-message {
+  color: #b71c1c;
+}
+
+/* Breadcrumbs and listings */
+
+.nbv-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  list-style: none;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.nbv-breadcrumbs li + li::before {
+  content: '/';
+  padding: 0 8px;
+  color: #bdbdbd;
+}
+
+.nbv-breadcrumbs a,
+.nbv-table a {
+  color: #616161;
+  text-decoration: none;
+}
+
+.nbv-breadcrumbs a:hover,
+.nbv-table a:hover {
+  color: #f37726;
+}
+
+/* The notebook flows in the page instead of scrolling in its own panel. */
+
+#nbviewer .jp-Notebook,
+#nbviewer .jp-WindowedPanel-outer {
+  height: auto;
+  overflow: visible;
+}
+
+#nbviewer .jp-Notebook {
+  padding: 0;
+}
+
+.nbv-listing-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.nbv-listing-header .nbv-breadcrumbs {
+  flex: 1;
+}
+
+.nbv-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nbv-table th {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.nbv-table td {
+  padding: 6px 8px;
+  border-top: 1px solid #eeeeee;
+  vertical-align: top;
+}
+
+.nbv-table tbody tr:nth-child(odd) {
+  background: #fafafa;
+}
+
+.nbv-icon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
+}
+
+.nbv-page-links {
+  text-align: center;
+}
+
+.nbv-refmenu {
+  position: relative;
+}
+
+.nbv-refmenu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  font: inherit;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+.nbv-refmenu-popup {
+  position: absolute;
+  right: 0;
+  z-index: 10;
+  min-width: 280px;
+  max-width: 90vw;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nbv-refmenu-content {
+  display: flex;
+  gap: 16px;
+}
+
+.nbv-refmenu-list {
+  flex: 1;
+}
+
+.nbv-refmenu-list h2 {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #757575;
+}
+
+.nbv-refmenu-list ul {
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nbv-refmenu-list a {
+  display: block;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.nbv-gist-description {
+  color: #616161;
+}

@@ -1,0 +1,52 @@
+{
+  "name": "nbviewerlite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A static, client-side Jupyter notebook viewer with nbviewer's URLs",
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jasongrout/nbviewerlite.git"
+  },
+  "scripts": {
+    "build": "rspack build --mode=production",
+    "build:dev": "rspack build --mode=development",
+    "start": "rspack serve --mode=development",
+    "preview": "node scripts/preview.mjs",
+    "typecheck": "tsc",
+    "test": "node --test --experimental-strip-types 'test/*.test.ts'"
+  },
+  "dependencies": {
+    "@jupyterlab/apputils": "~4.6.11",
+    "@jupyterlab/cells": "~4.5.11",
+    "@jupyterlab/codemirror": "~4.5.11",
+    "@jupyterlab/markedparser-extension": "~4.5.11",
+    "@jupyterlab/mathjax-extension": "~4.5.11",
+    "@jupyterlab/nbformat": "~4.5.11",
+    "@jupyterlab/notebook": "~4.5.11",
+    "@jupyterlab/rendermime": "~4.5.11",
+    "@jupyterlab/rendermime-interfaces": "~3.13.11",
+    "@jupyterlab/theme-light-extension": "~4.5.11",
+    "@jupyterlab/ui-components": "~4.5.11",
+    "@lumino/widgets": "^2.7.5",
+    "jquery": "^3.7.1",
+    "requirejs": "^2.3.8"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.7.12",
+    "@rspack/core": "^1.7.12",
+    "@types/jquery": "^3.5.34",
+    "@types/node": "^22.20.5",
+    "css-loader": "^6.11.0",
+    "style-loader": "~3.3.1",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "none",
+    "arrowParens": "avoid"
+  }
+}
