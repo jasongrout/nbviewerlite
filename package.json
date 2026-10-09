@@ -14,7 +14,8 @@
     "start": "rspack serve --mode=development",
     "preview": "node scripts/preview.mjs",
     "typecheck": "tsc",
-    "test": "node --test --experimental-strip-types 'test/*.test.ts'"
+    "test": "node --test --experimental-strip-types 'test/*.test.ts'",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@jupyter-widgets/base": "^6.0.12",
