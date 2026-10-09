@@ -7,7 +7,10 @@ import { viewerPathForInput } from '../src/rewrites.ts';
 // the repo page (default branch) instead of tree/master.
 const cases: [string, string][] = [
   ['0123456789abcdef0123', '0123456789abcdef0123'],
-  ['https://gist.github.com/fperez/0123456789abcdef0123', '0123456789abcdef0123'],
+  [
+    'https://gist.github.com/fperez/0123456789abcdef0123',
+    '0123456789abcdef0123'
+  ],
   [
     'https://github.com/ipython/ipython/raw/6.x/examples/Index.ipynb',
     'github/ipython/ipython/blob/6.x/examples/Index.ipynb'
@@ -44,7 +47,10 @@ const cases: [string, string][] = [
   ],
   ['http://example.org/nb.ipynb', 'url/example.org/nb.ipynb'],
   ['example.org/nb.ipynb', 'url/example.org/nb.ipynb'],
-  ['https://example.org/get?name=nb.ipynb&raw=1', 'urls/example.org/get/%3Fname%3Dnb.ipynb%26raw%3D1']
+  [
+    'https://example.org/get?name=nb.ipynb&raw=1',
+    'urls/example.org/get/%3Fname%3Dnb.ipynb%26raw%3D1'
+  ]
 ];
 
 test('landing page input follows nbviewer rewrites', () => {

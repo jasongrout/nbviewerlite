@@ -7,7 +7,7 @@ import {
   showFailure
 } from './context.ts';
 import { breadcrumbs, type ILink } from './listing.ts';
-import { rejoinLines } from './nbformat.ts';
+import { normalizeNotebook } from './nbformat.ts';
 import {
   addHeaderLink,
   h,
@@ -77,7 +77,7 @@ export function parseNotebook(
   if (!Array.isArray(nb.cells)) {
     throw new NotebookError(`${name} is not a valid notebook (no cells).`);
   }
-  return rejoinLines(nb);
+  return normalizeNotebook(nb);
 }
 
 export interface INotebookSource {
@@ -108,6 +108,10 @@ export async function showNotebook(
   setTitle(source.title);
   showStatus(root, 'Loading notebook from ', link(source.url, source.url), '…');
 
+  const elsewhere: [string, string] = source.provider
+    ? [source.provider[0], `notebook on ${source.provider[1]}`]
+    : [source.url, 'file itself'];
+
   let nb: nbformat.INotebookContent;
   try {
     const text = await (source.load ?? (() => fetchText(source.url)))();
@@ -122,9 +126,6 @@ export async function showNotebook(
       return;
     }
     const details = err instanceof NotebookError ? err.details : [];
-    const elsewhere: [string, string] = source.provider
-      ? [source.provider[0], `notebook on ${source.provider[1]}`]
-      : [source.url, 'file itself'];
     showFailure(ctx, err, elsewhere, ...details);
     return;
   }
@@ -144,17 +145,47 @@ export async function showNotebook(
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');
 
-  // Rendering code is a separate chunk, so listing, landing and error pages
-  // stay light.
-  const { renderNotebook } = await import(
-    /* webpackChunkName: "render" */ './render.ts'
-  );
-  const host = h('div');
-  root.replaceChildren(
-    ...(source.breadcrumbs?.length ? [breadcrumbs(source.breadcrumbs)] : []),
-    host
-  );
-  renderNotebook(nb, host, new SourceResolver(source.url, source.linkFor));
+  const crumbs = source.breadcrumbs?.length
+    ? [breadcrumbs(source.breadcrumbs)]
+    : [];
+  if (nb.cells.length === 0) {
+    root.replaceChildren(
+      ...crumbs,
+      h('div', { class: 'nbv-status' }, 'This notebook has no cells.')
+    );
+    return;
+  }
+
+  try {
+    // Rendering code is a separate chunk, so listing, landing and error
+    // pages stay light.
+    const { renderNotebook } = await import(
+      /* webpackChunkName: "render" */ './render.ts'
+    );
+    const host = h('div');
+    root.replaceChildren(...crumbs, host);
+    renderNotebook(nb, host, new SourceResolver(source.url, source.linkFor));
+  } catch (err) {
+    showFailure(ctx, err, elsewhere);
+    return;
+  }
+
+  // Fragment links, including ones JupyterLab leaves alone (bare '#',
+  // non-ASCII ids) or marks to open in a new tab, scroll within the page.
+  root.addEventListener('click', event => {
+    const anchor = (event.target as Element | null)?.closest?.('a');
+    const href = anchor?.getAttribute('href');
+    if (!href?.startsWith('#') || event.defaultPrevented) {
+      return;
+    }
+    event.preventDefault();
+    history.pushState(null, '', href);
+    if (href === '#') {
+      window.scrollTo(0, 0);
+    } else {
+      scrollToFragment(root);
+    }
+  });
   scrollToFragment(root);
   window.addEventListener('hashchange', () => scrollToFragment(root));
 }

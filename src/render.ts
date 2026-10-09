@@ -1,3 +1,5 @@
+import { Sanitizer } from '@jupyterlab/apputils';
+import { MarkdownCell } from '@jupyterlab/cells';
 import {
   CodeMirrorEditorFactory,
   CodeMirrorMimeTypeService,
@@ -75,6 +77,13 @@ function trustCells(nb: nbformat.INotebookContent): nbformat.INotebookContent {
   };
 }
 
+/** Empty markdown cells show nothing, not JupyterLab's "Type Markdown" box. */
+class ContentFactory extends StaticNotebook.ContentFactory {
+  createMarkdownCell(options: MarkdownCell.IOptions): MarkdownCell {
+    return super.createMarkdownCell({ ...options, emptyPlaceholder: '' });
+  }
+}
+
 /**
  * Render a notebook into `host` with JupyterLab's notebook widget.
  */
@@ -85,18 +94,31 @@ export function renderNotebook(
 ): StaticNotebook {
   const { languages, editorFactory, mimeTypeService } = createEditorServices();
 
+  // Keep id and name attributes in markdown, so links to <a name=...>
+  // anchors work as on nbviewer.org (which doesn't sanitize at all).
+  const sanitizer = new Sanitizer();
+  sanitizer.setAllowNamedProperties(true);
+
   const rendermime = new RenderMimeRegistry({
     initialFactories: standardRendererFactories,
     latexTypesetter: new MathJaxTypesetter(),
     markdownParser: createMarkdownParser(languages),
-    resolver
+    resolver,
+    sanitizer,
+    linkHandler: {
+      // Relative links (other notebooks, files) open in the same tab, as on
+      // nbviewer.org; JupyterLab would open them in a new one.
+      handleLink(node: HTMLElement) {
+        (node as HTMLAnchorElement).target = '_self';
+      }
+    }
   });
   rendermime.addFactory(javaScriptRendererFactory, 0);
 
   const readOnly = { readOnly: true };
   const notebook = new StaticNotebook({
     rendermime,
-    contentFactory: new StaticNotebook.ContentFactory({ editorFactory }),
+    contentFactory: new ContentFactory({ editorFactory }),
     mimeTypeService,
     editorConfig: {
       code: { ...StaticNotebook.defaultEditorConfig.code, ...readOnly },
@@ -120,6 +142,9 @@ export function renderNotebook(
   notebook.model = model;
   for (const cell of notebook.widgets) {
     cell.readOnly = true;
+    if (cell instanceof MarkdownCell) {
+      cell.rendered = true;
+    }
   }
 
   Widget.attach(notebook, host);

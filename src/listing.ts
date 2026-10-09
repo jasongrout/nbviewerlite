@@ -18,7 +18,9 @@ export function breadcrumbs(crumbs: ILink[]): HTMLElement {
     h(
       'ol',
       {},
-      ...crumbs.map(crumb => h('li', {}, h('a', { href: crumb.url }, crumb.name)))
+      ...crumbs.map(crumb =>
+        h('li', {}, h('a', { href: crumb.url }, crumb.name))
+      )
     )
   );
 }

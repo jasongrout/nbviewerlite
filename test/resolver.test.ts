@@ -16,6 +16,8 @@ test('relative URLs are local; absolute ones are not', () => {
   assert.equal(resolver.isLocal('//cdn.example.org/a.js'), false);
   assert.equal(resolver.isLocal('data:image/png;base64,AAAA'), false);
   assert.equal(resolver.isLocal('mailto:a@example.org'), false);
+  assert.equal(resolver.isLocal('#'), false);
+  assert.equal(resolver.isLocal('#Введение'), false);
 });
 
 test('images resolve against the source', async () => {
@@ -31,7 +33,10 @@ test('images resolve against the source', async () => {
 
 test('links go through the provider', async () => {
   assert.equal(
-    await resolver.resolveUrl('../other.ipynb', { attribute: 'href', tag: 'a' }),
+    await resolver.resolveUrl('../other.ipynb', {
+      attribute: 'href',
+      tag: 'a'
+    }),
     'link:https://raw.githubusercontent.com/u/r/main/other.ipynb'
   );
   assert.equal(await resolver.getDownloadUrl('x'), 'x');

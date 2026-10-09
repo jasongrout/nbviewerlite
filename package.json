@@ -17,6 +17,8 @@
     "test": "node --test --experimental-strip-types 'test/*.test.ts'"
   },
   "dependencies": {
+    "@jupyterlab/apputils": "~4.6.11",
+    "@jupyterlab/cells": "~4.5.11",
     "@jupyterlab/codemirror": "~4.5.11",
     "@jupyterlab/markedparser-extension": "~4.5.11",
     "@jupyterlab/mathjax-extension": "~4.5.11",

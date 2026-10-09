@@ -18,7 +18,8 @@ export class SourceResolver implements IRenderMime.IResolver {
   }
 
   isLocal(url: string): boolean {
-    if (url.startsWith('//')) {
+    // fragment links stay as they are: they point into this page
+    if (url.startsWith('#') || url.startsWith('//')) {
       return false;
     }
     try {

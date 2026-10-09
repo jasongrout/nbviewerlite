@@ -18,7 +18,11 @@ export class GitHubError extends Error {
   /** When the rate limit resets, if it was exceeded. */
   readonly rateLimitReset: Date | null;
 
-  constructor(message: string, status: number, rateLimitReset: Date | null = null) {
+  constructor(
+    message: string,
+    status: number,
+    rateLimitReset: Date | null = null
+  ) {
     super(message);
     this.status = status;
     this.rateLimitReset = rateLimitReset;
@@ -72,7 +76,10 @@ async function apiError(response: Response): Promise<GitHubError> {
   }
   const remaining = response.headers.get('X-RateLimit-Remaining');
   const reset = response.headers.get('X-RateLimit-Reset');
-  if ((response.status === 403 || response.status === 429) && remaining === '0') {
+  if (
+    (response.status === 403 || response.status === 429) &&
+    remaining === '0'
+  ) {
     const resetDate = reset ? new Date(Number(reset) * 1000) : null;
     return new GitHubError(
       'GitHub API rate limit exceeded for your network.',
@@ -124,16 +131,20 @@ export function contentsPath(user: string, repo: string, path: string) {
 }
 
 /**
- * Owner and repo from an entry's html_url. The API follows renames, so
- * these can differ from the names in the viewer URL.
+ * Owner and repo from a Contents API entry's `url`
+ * (https://api.github.com/repos/{owner}/{repo}/contents/...). The API
+ * follows renames, so these can differ from the names in the viewer URL.
+ * Unlike html_url, `url` names the listed repo even for submodules.
  */
-export function repoFromHtmlUrl(
-  htmlUrl: string | null | undefined
+export function repoFromApiUrl(
+  apiUrl: string | null | undefined
 ): { user: string; repo: string } | null {
-  if (!htmlUrl?.startsWith(GITHUB_URL)) {
+  if (!apiUrl?.startsWith(GITHUB_API_URL + 'repos/')) {
     return null;
   }
-  const [user, repo] = htmlUrl.slice(GITHUB_URL.length).split('/');
+  const [user, repo] = apiUrl
+    .slice(GITHUB_API_URL.length + 'repos/'.length)
+    .split('/');
   if (!user || !repo) {
     return null;
   }
@@ -145,6 +156,8 @@ export interface IContentsEntry {
   name: string;
   path: string;
   type: 'file' | 'dir' | 'symlink' | 'submodule';
+  /** This entry in the Contents API. */
+  url: string;
   html_url: string | null;
 }
 
@@ -152,8 +165,8 @@ export type EntryKind = 'dir' | 'notebook' | 'file' | 'submodule';
 
 /**
  * Sort a directory listing like nbviewer: directories, then notebooks, then
- * everything else (files, and submodules, which have no html_url), each in
- * the API's alphabetical order.
+ * everything else, each in the API's alphabetical order. Entries without an
+ * html_url (submodules hosted outside GitHub) get no link.
  */
 export function sortEntries(
   entries: IContentsEntry[]
@@ -179,9 +192,9 @@ function entryKind(entry: IContentsEntry): EntryKind {
   return entry.html_url ? 'file' : 'submodule';
 }
 
-/** nbviewer's clean_filename: how gist.github.com anchors a file. */
+/** How gist.github.com anchors a file (nbviewer's clean_filename, lowercased). */
 export function gistFileAnchor(filename: string): string {
-  return 'file-' + filename.replace(/[^0-9a-zA-Z]+/g, '-');
+  return 'file-' + filename.replace(/[^0-9a-zA-Z]+/g, '-').toLowerCase();
 }
 
 function enc(s: string): string {

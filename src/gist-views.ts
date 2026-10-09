@@ -79,7 +79,10 @@ export async function showGist(
   const name = filename || names[0];
   const file = gist.files[name];
   if (!file) {
-    showFailure(ctx, new Error(`No such file in gist: ${name}`), [gist.html_url, 'gist on GitHub']);
+    showFailure(ctx, new Error(`No such file in gist: ${name}`), [
+      gist.html_url,
+      'gist on GitHub'
+    ]);
     return;
   }
   if (manyFiles && !name.endsWith('.ipynb')) {
@@ -92,10 +95,14 @@ export async function showGist(
     url: file.raw_url,
     title: name,
     load: async () =>
-      file.truncated || file.content === undefined ? fetchText(file.raw_url) : file.content,
+      file.truncated || file.content === undefined
+        ? fetchText(file.raw_url)
+        : file.content,
     // gists are flat: a relative link to another notebook names a file in it
     linkFor: absolute => {
-      const target = decodeURIComponent(new URL(absolute).pathname.split('/').pop() ?? '');
+      const target = decodeURIComponent(
+        new URL(absolute).pathname.split('/').pop() ?? ''
+      );
       return target in gist.files && target.endsWith('.ipynb')
         ? viewerUrl(gistPath(user, gist.id, target))
         : absolute;
@@ -118,9 +125,19 @@ function showGistFiles(ctx: IContext, user: string, gist: IGist): void {
   const notebooks = files.filter(f => f.filename.endsWith('.ipynb'));
   const others = files.filter(f => !f.filename.endsWith('.ipynb'));
   const rows = [
-    [iconLink(viewerUrl(`gist/${encodeURIComponent(user)}/`), 'caretUp', `${user}'s gists`)],
+    [
+      iconLink(
+        viewerUrl(`gist/${encodeURIComponent(user)}/`),
+        'caretUp',
+        `${user}'s gists`
+      )
+    ],
     ...notebooks.map(f => [
-      iconLink(viewerUrl(gistPath(user, gist.id, f.filename)), 'notebook', f.filename)
+      iconLink(
+        viewerUrl(gistPath(user, gist.id, f.filename)),
+        'notebook',
+        f.filename
+      )
     ]),
     ...others.map(f => [
       iconLink(
@@ -145,14 +162,20 @@ export async function showGistUser(ctx: IContext, user: string): Promise<void> {
       page ? { page } : {}
     );
   } catch (err) {
-    showFailure(ctx, err, [GIST_URL + encodeURIComponent(user), 'gists on GitHub']);
+    showFailure(ctx, err, [
+      GIST_URL + encodeURIComponent(user),
+      'gists on GitHub'
+    ]);
     return;
   }
   addHeaderLink(GIST_URL + encodeURIComponent(user), 'View on Gist', 'launch');
   addNbviewerLink(ctx);
 
   const rows = response.data
-    .map(gist => ({ gist, notebooks: Object.keys(gist.files).filter(n => n.endsWith('.ipynb')) }))
+    .map(gist => ({
+      gist,
+      notebooks: Object.keys(gist.files).filter(n => n.endsWith('.ipynb'))
+    }))
     .filter(({ notebooks }) => notebooks.length)
     .map(({ gist, notebooks }) => [
       h('a', { href: viewerUrl(gistPath(user, gist.id)) }, gist.id),

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { rejoinLines } from '../src/nbformat.ts';
+import { normalizeNotebook } from '../src/nbformat.ts';
 
-test('rejoinLines joins sources, streams, and non-JSON mime data', () => {
+test('normalizeNotebook joins sources, streams, and non-JSON mime data', () => {
   const nb = {
     nbformat: 4,
     nbformat_minor: 0,
@@ -37,7 +37,7 @@ test('rejoinLines joins sources, streams, and non-JSON mime data', () => {
       { cell_type: 'raw', source: 'already a string', metadata: {} }
     ]
   };
-  const out = rejoinLines(nb);
+  const out = normalizeNotebook(nb);
   assert.equal(out.cells[0].source, '# Title\ntext');
   assert.equal(out.cells[0].attachments['a.png']['image/png'], 'iVBO\nRw0K');
   assert.equal(out.cells[1].source, 'x = 1\nx');
@@ -50,4 +50,39 @@ test('rejoinLines joins sources, streams, and non-JSON mime data', () => {
   assert.equal(out.cells[2].source, 'already a string');
   // the input is not modified
   assert.deepEqual(nb.cells[0].source, ['# Title\n', 'text']);
+});
+
+test('normalizeNotebook drops transient metadata and fills in missing fields', () => {
+  const out = normalizeNotebook({
+    nbformat: 4,
+    nbformat_minor: 0,
+    metadata: {
+      orig_nbformat: 3,
+      orig_nbformat_minor: 1,
+      signature: 'x',
+      kernelspec: { name: 'p' }
+    },
+    cells: [
+      { cell_type: 'markdown' },
+      {
+        cell_type: 'code',
+        source: 'x',
+        outputs: [
+          { output_type: 'stream', name: 'stdout' },
+          { output_type: 'display_data' }
+        ]
+      },
+      { cell_type: 'code', source: 'y' }
+    ]
+  });
+  assert.deepEqual(out.metadata, { kernelspec: { name: 'p' } });
+  assert.deepEqual(out.cells[0], {
+    cell_type: 'markdown',
+    metadata: {},
+    source: ''
+  });
+  assert.equal(out.cells[1].outputs[0].text, '');
+  assert.deepEqual(out.cells[1].outputs[1].data, {});
+  assert.deepEqual(out.cells[2].outputs, []);
+  assert.deepEqual(normalizeNotebook({ nbformat: 4, cells: [] }).metadata, {});
 });

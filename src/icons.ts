@@ -12,7 +12,16 @@ import kernel from '@jupyterlab/ui-components/style/icons/statusbar/kernel.svg';
 import download from '@jupyterlab/ui-components/style/icons/toolbar/download.svg';
 import launch from '@jupyterlab/ui-components/style/icons/toolbar/launch.svg';
 
-const ICONS = { caretDown, caretUp, download, file, folder, kernel, launch, notebook };
+const ICONS = {
+  caretDown,
+  caretUp,
+  download,
+  file,
+  folder,
+  kernel,
+  launch,
+  notebook
+};
 
 export type IconName = keyof typeof ICONS;
 

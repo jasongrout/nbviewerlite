@@ -25,16 +25,28 @@ function rejoinMimeBundle(data: MimeBundle): MimeBundle {
 }
 
 /**
- * Join multi-line strings stored as lists of lines.
- * A port of nbformat.v4.rwbase.rejoin_lines.
+ * Normalize notebook JSON the way nbformat.reads does for jupyter_server:
+ * join multi-line strings stored as lists of lines (rejoin_lines), drop
+ * transient metadata (strip_transient; JupyterLab shows a "Notebook
+ * converted" dialog when orig_nbformat is set), and fill in fields that
+ * JupyterLab expects but sloppy notebooks leave out.
  */
-export function rejoinLines(nb: any): any {
+export function normalizeNotebook(nb: any): any {
+  const {
+    orig_nbformat: _orig,
+    orig_nbformat_minor: _origMinor,
+    signature: _signature,
+    ...metadata
+  } = nb.metadata ?? {};
   return {
     ...nb,
+    metadata,
     cells: nb.cells.map((cell: any) => {
-      const result = { ...cell };
+      const result = { ...cell, metadata: cell.metadata ?? {} };
       if (isLines(cell.source)) {
         result.source = cell.source.join('');
+      } else if (typeof cell.source !== 'string') {
+        result.source = '';
       }
       if (cell.attachments) {
         result.attachments = Object.fromEntries(
@@ -44,20 +56,30 @@ export function rejoinLines(nb: any): any {
           ])
         );
       }
-      if (cell.cell_type === 'code' && Array.isArray(cell.outputs)) {
-        result.outputs = cell.outputs.map((output: any) => {
-          if (
-            (output.output_type === 'execute_result' ||
-              output.output_type === 'display_data') &&
-            output.data
-          ) {
-            return { ...output, data: rejoinMimeBundle(output.data) };
+      if (cell.cell_type === 'code') {
+        result.outputs = (Array.isArray(cell.outputs) ? cell.outputs : []).map(
+          (output: any) => {
+            if (
+              output.output_type === 'execute_result' ||
+              output.output_type === 'display_data'
+            ) {
+              return {
+                ...output,
+                data: rejoinMimeBundle(output.data ?? {}),
+                metadata: output.metadata ?? {}
+              };
+            }
+            if (output.output_type === 'stream') {
+              return {
+                ...output,
+                text: isLines(output.text)
+                  ? output.text.join('')
+                  : (output.text ?? '')
+              };
+            }
+            return output;
           }
-          if (isLines(output.text)) {
-            return { ...output, text: output.text.join('') };
-          }
-          return output;
-        });
+        );
       }
       return result;
     })

@@ -21,8 +21,10 @@ import { fetchUrl, parseRoute, viewerPath } from './route.ts';
 
 import './style.css';
 
-// Classic-notebook outputs expect jQuery as a global, as on nbviewer.org.
+// Classic-notebook outputs expect jQuery as a global, as on nbviewer.org,
+// and as a RequireJS module.
 Object.assign(window, { jQuery, $: jQuery });
+(window as any).define?.('jquery', [], () => jQuery);
 
 /** url/{netloc}/{path} and urls/{netloc}/{path} */
 async function showUrl(
@@ -32,11 +34,11 @@ async function showUrl(
 ): Promise<void> {
   const url = fetchUrl(remoteUrl, window.location.protocol);
 
-  // Like nbviewer: a relative link from a notebook to a non-notebook file
-  // opens the file itself rather than trying to render it.
+  // Like nbviewer: a relative link from a url/urls notebook to a
+  // non-notebook file opens the file itself rather than trying to render it.
   if (
     !/\.ipynb$/i.test(filename) &&
-    document.referrer.startsWith(window.location.origin + '/')
+    document.referrer.startsWith(window.location.origin + '/url')
   ) {
     window.location.replace(url);
     return;

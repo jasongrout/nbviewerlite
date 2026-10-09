@@ -15,13 +15,19 @@ const REWRITES: Rewrite[] = [
     /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/raw\/([^/]+)\/(.*)/,
     'github/{0}/{1}/blob/{2}/{3}'
   ],
-  [/^https?:\/\/raw\.github\.com\/([^/]+)\/([^/]+)\/(.*)/, 'github/{0}/{1}/blob/{2}'],
+  [
+    /^https?:\/\/raw\.github\.com\/([^/]+)\/([^/]+)\/(.*)/,
+    'github/{0}/{1}/blob/{2}'
+  ],
   [
     /^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/(.*)/,
     'github/{0}/{1}/blob/{2}'
   ],
   // github: trees and blobs, user/repo, user
-  [/^https?:\/\/github.com\/([\w-]+)\/([^/]+)\/(blob|tree)\/(.*)$/, 'github/{0}/{1}/{2}/{3}'],
+  [
+    /^https?:\/\/github.com\/([\w-]+)\/([^/]+)\/(blob|tree)\/(.*)$/,
+    'github/{0}/{1}/{2}/{3}'
+  ],
   // nbviewer assumes "master" here; the repo page looks up the default branch
   [/^([\w-]+)\/([^/]+)$/, 'github/{0}/{1}/'],
   [/^([\w-]+)$/, 'github/{0}/'],
@@ -31,7 +37,10 @@ const REWRITES: Rewrite[] = [
     'url{0}/dl.dropbox.com/{1}/{2}'
   ],
   // huggingface
-  [/^https:\/\/huggingface.co\/(.+?)\/blob\/(.+?)$/, 'urls/huggingface.co/{0}/resolve/{1}'],
+  [
+    /^https:\/\/huggingface.co\/(.+?)\/blob\/(.+?)$/,
+    'urls/huggingface.co/{0}/resolve/{1}'
+  ],
   // url
   [/^http(s?):\/\/(.*)$/, 'url{0}/{1}'],
   [/^(.*)$/, 'url/{0}']

@@ -33,7 +33,10 @@ export function addHeaderLink(
   if (!bar) {
     return;
   }
-  const content = [icon(iconName), h('span', { class: 'nbv-link-text' }, title)];
+  const content = [
+    icon(iconName),
+    h('span', { class: 'nbv-link-text' }, title)
+  ];
   bar.append(
     href === null
       ? h('span', { class: 'nbv-link', title }, ...content)
@@ -116,18 +119,29 @@ export function showHome(
  * id, so the browser can't do this itself.
  */
 export function scrollToFragment(root: HTMLElement): void {
-  const id = decodeURIComponent(window.location.hash.slice(1));
+  const fragment = window.location.hash.slice(1);
+  let id = fragment;
+  try {
+    id = decodeURIComponent(fragment);
+  } catch {
+    // not percent-encoded UTF-8: use it as it is
+  }
   if (!id) {
     return;
   }
   const escaped = CSS.escape(id);
-  const selector = `[data-jupyter-id="${escaped}"], [id="${escaped}"]`;
+  const selector =
+    `[data-jupyter-id="${escaped}"], [id="${escaped}"], ` +
+    `a[name="${escaped}"]`;
   // Not scrollIntoView: JupyterLab's nested overflow containers make it
   // ignore scroll margins.
   const scroll = () => {
     const target = root.querySelector(selector);
     if (target) {
-      window.scrollTo(0, target.getBoundingClientRect().top + window.scrollY - 8);
+      window.scrollTo(
+        0,
+        target.getBoundingClientRect().top + window.scrollY - 8
+      );
     }
   };
   const observer = new ResizeObserver(scroll);

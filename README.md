@@ -36,22 +36,22 @@ npm run preview      # serve dist/ like the production hosts do
 
 ## Deployment
 
-`npm run build` writes a static site to `dist/`, including `_redirects` and
-`_headers` files that Netlify and Cloudflare Pages read. The important line
-is
-
-    /*  /index.html  200
-
-Status 200 makes it a rewrite rather than a redirect: the host answers any
-path that isn't a file with `index.html`, and the browser keeps the original
-URL. Assets live under `/static/` with content-hashed names, and the site
-must be served from the root of its domain.
+`npm run build` writes a static site to `dist/`. Every path that isn't a file
+has to be answered with `index.html` and status 200 (a rewrite, not a
+redirect), so the browser keeps the URL the app reads. Assets live under
+`/static/` with content-hashed names, and the site must be served from the
+root of its domain.
 
 - **Netlify:** connect the repository. `netlify.toml` sets the build command
-  and the `dist` publish directory.
+  and the `dist` publish directory, and `_redirects` does the rewrite:
+  `/*  /index.html  200` (rules apply only where no file exists), with
+  missing `/static/` files answered by a 404.
 - **Cloudflare Pages:** connect the repository with build command
   `npm run build` and output directory `dist` (as in `wrangler.toml`), or
-  upload a local build with `npx wrangler pages deploy dist`.
+  upload a local build with `npx wrangler pages deploy dist`. Pages ignores
+  the catch-all rule in `_redirects` (it reports it as an infinite loop) and
+  rewrites unknown paths to `index.html` by itself, as long as `dist/` has no
+  top-level `404.html`. Don't add one.
 
 Other static hosts work if they can rewrite unknown paths to `/index.html`,
 e.g. nginx with `try_files $uri /index.html;`.

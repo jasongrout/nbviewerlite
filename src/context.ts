@@ -73,7 +73,8 @@ export function showFailure(
 ): void {
   const message = err instanceof Error ? err.message : String(err);
   // GitHub API errors say when an exceeded rate limit resets
-  const reset = (err as { rateLimitReset?: Date | null } | null)?.rateLimitReset;
+  const reset = (err as { rateLimitReset?: Date | null } | null)
+    ?.rateLimitReset;
   if (reset) {
     details = [[`It resets at ${reset.toLocaleTimeString()}.`], ...details];
   }

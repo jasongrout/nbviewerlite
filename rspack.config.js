@@ -20,6 +20,10 @@ const jupyterLogo = fs.readFileSync(
 
 module.exports = (env, argv) => ({
   entry: './src/index.ts',
+  // Handle AMD/UMD wrappers inside the bundle. Otherwise they call the page's
+  // global RequireJS define() (sanitize-html's parse-srcset does, anonymously),
+  // which makes the first require() in a notebook output throw.
+  amd: {},
   output: {
     path: path.resolve(__dirname, 'dist'),
     // index.html is served at every path, so asset URLs must be absolute

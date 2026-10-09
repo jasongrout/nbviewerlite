@@ -71,11 +71,18 @@ const ROUTES: Matcher[] = [
   [/^url(s?)\/([^/]+)\/(.*)$/, urlRoute],
   // github provider
   [/^github\/([^/]+)$/, addSlash],
-  [/^github\/([^/]+)\/$/, ([user]) => ({ kind: 'github-user', user: dec(user) })],
+  [
+    /^github\/([^/]+)\/$/,
+    ([user]) => ({ kind: 'github-user', user: dec(user) })
+  ],
   [/^github\/([^/]+)\/([^/]+)$/, addSlash],
   [
     /^github\/([^/]+)\/([^/]+)\/$/,
-    ([user, repo]) => ({ kind: 'github-repo', user: dec(user), repo: dec(repo) })
+    ([user, repo]) => ({
+      kind: 'github-repo',
+      user: dec(user),
+      repo: dec(repo)
+    })
   ],
   [/^github\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.*)\/$/, removeSlash],
   [/^github\/([^/]+)\/([^/]+)\/tree\/([^/]+)$/, addSlash],
@@ -133,8 +140,13 @@ export function parseRoute(path: string): Route {
   return { kind: 'notfound' };
 }
 
+/**
+ * Decode like Tornado's url_unescape: valid escapes are decoded, and a '%'
+ * that doesn't start one stays a literal '%'. Throws (giving notfound) only
+ * for escapes that decode to invalid UTF-8.
+ */
 function dec(s: string): string {
-  return decodeURIComponent(s);
+  return s.replace(/(%[0-9A-Fa-f]{2})+/g, decodeURIComponent);
 }
 
 function redirect(path: string): Route {
@@ -149,6 +161,8 @@ function urlRoute([secure, netloc, rest]: string[]): Route {
     query = '?' + dec(urlPath.slice(q + 4));
     urlPath = urlPath.slice(0, q);
   }
+  // a literal '%' (see dec) has to be escaped in the URL we fetch
+  urlPath = urlPath.replace(/%(?![0-9A-Fa-f]{2})/g, '%25');
   const remoteUrl = `http${secure}://${dec(netloc)}/${urlPath}${query}`;
   const filename = dec(urlPath.split('/').pop() || '');
   return { kind: 'url', remoteUrl, filename };
@@ -158,13 +172,33 @@ function repoRoute(
   kind: 'github-tree' | 'github-blob',
   [user, repo, ref, path]: string[]
 ): Route {
+  let decodedRef = dec(ref);
+  let segments = path.replace(/\/+$/, '').split('/');
+  // GitHub's raw URLs now name branches as refs/heads/{branch}
+  if (
+    decodedRef === 'refs' &&
+    (segments[0] === 'heads' || segments[0] === 'tags') &&
+    segments.length >= 2
+  ) {
+    decodedRef = dec(segments[1]);
+    segments = segments.slice(2);
+  }
+  const decodedPath = segments.map(dec).join('/');
+  // '..' would step out of the repo named in the URL once a URL is built
+  if (hasDotSegment(decodedRef) || hasDotSegment(decodedPath)) {
+    return { kind: 'notfound' };
+  }
   return {
     kind,
     user: dec(user),
     repo: dec(repo),
-    ref: dec(ref),
-    path: path.replace(/\/+$/, '').split('/').map(dec).join('/')
+    ref: decodedRef,
+    path: decodedPath
   };
+}
+
+function hasDotSegment(s: string): boolean {
+  return s.split('/').some(segment => segment === '.' || segment === '..');
 }
 
 function gistRoute(user: string, id: string, file: string): Route {

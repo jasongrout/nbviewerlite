@@ -9,7 +9,7 @@ import {
   GitHubError,
   parseLinkHeader,
   rawUrl,
-  repoFromHtmlUrl,
+  repoFromApiUrl,
   sortEntries,
   treeUrl,
   type IContentsEntry
@@ -29,8 +29,14 @@ test('GitHub URLs', () => {
     blobUrl('u', 'r', 'feature/x', 'a#b.ipynb'),
     'https://github.com/u/r/blob/feature/x/a%23b.ipynb'
   );
-  assert.equal(treeUrl('u', 'r', 'main', ''), 'https://github.com/u/r/tree/main');
-  assert.equal(treeUrl('u', 'r', 'main', 'a b'), 'https://github.com/u/r/tree/main/a%20b');
+  assert.equal(
+    treeUrl('u', 'r', 'main', ''),
+    'https://github.com/u/r/tree/main'
+  );
+  assert.equal(
+    treeUrl('u', 'r', 'main', 'a b'),
+    'https://github.com/u/r/tree/main/a%20b'
+  );
   assert.equal(contentsPath('u', 'r', 'a b/c'), 'repos/u/r/contents/a%20b/c');
   assert.equal(contentsPath('u', 'r', ''), 'repos/u/r/contents/');
 });
@@ -40,24 +46,35 @@ test('parseLinkHeader extracts page numbers', () => {
     '<https://api.github.com/user/123/repos?sort=updated&page=1>; rel="prev", ' +
     '<https://api.github.com/user/123/repos?sort=updated&page=3>; rel="next", ' +
     '<https://api.github.com/user/123/repos?sort=updated&page=9>; rel="last"';
-  assert.deepEqual(parseLinkHeader(header), { prev: '1', next: '3', last: '9' });
+  assert.deepEqual(parseLinkHeader(header), {
+    prev: '1',
+    next: '3',
+    last: '9'
+  });
   assert.deepEqual(parseLinkHeader(''), {});
 });
 
-test('repoFromHtmlUrl follows renames', () => {
+test('repoFromApiUrl follows renames', () => {
   assert.deepEqual(
-    repoFromHtmlUrl('https://github.com/new-owner/new-name/blob/main/a.ipynb'),
+    repoFromApiUrl(
+      'https://api.github.com/repos/new-owner/new-name/contents/a.ipynb?ref=main'
+    ),
     { user: 'new-owner', repo: 'new-name' }
   );
-  assert.equal(repoFromHtmlUrl(null), null);
-  assert.equal(repoFromHtmlUrl('https://example.org/x/y'), null);
+  assert.equal(repoFromApiUrl(undefined), null);
+  assert.equal(repoFromApiUrl('https://example.org/repos/x/y'), null);
 });
 
 test('sortEntries orders like nbviewer', () => {
-  const e = (name: string, type: IContentsEntry['type'], html = true): IContentsEntry => ({
+  const e = (
+    name: string,
+    type: IContentsEntry['type'],
+    html = true
+  ): IContentsEntry => ({
     name,
     path: name,
     type,
+    url: `https://api.github.com/repos/u/r/contents/${name}?ref=main`,
     html_url: html ? `https://github.com/u/r/blob/main/${name}` : null
   });
   const sorted = sortEntries([
@@ -84,10 +101,14 @@ test('sortEntries orders like nbviewer', () => {
 });
 
 test('gistFileAnchor matches gist.github.com', () => {
-  assert.equal(gistFileAnchor('My Notebook.ipynb'), 'file-My-Notebook-ipynb');
+  assert.equal(gistFileAnchor('My Notebook.ipynb'), 'file-my-notebook-ipynb');
 });
 
-function respond(status: number, body: unknown, headers: Record<string, string> = {}) {
+function respond(
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {}
+) {
   globalThis.fetch = async () =>
     new Response(JSON.stringify(body), {
       status,
@@ -100,14 +121,22 @@ test('apiGet returns data and page links', async () => {
     Link: '<https://api.github.com/users/u/repos?page=2>; rel="next"'
   });
   const result = await apiGet('users/u/repos', { sort: 'updated' });
-  assert.deepEqual(result, { data: [{ name: 'a' }], prevPage: null, nextPage: '2' });
+  assert.deepEqual(result, {
+    data: [{ name: 'a' }],
+    prevPage: null,
+    nextPage: '2'
+  });
 });
 
 test('apiGet reports rate limits with their reset time', async () => {
-  respond(403, { message: 'API rate limit exceeded for 1.2.3.4.' }, {
-    'X-RateLimit-Remaining': '0',
-    'X-RateLimit-Reset': '1700000000'
-  });
+  respond(
+    403,
+    { message: 'API rate limit exceeded for 1.2.3.4.' },
+    {
+      'X-RateLimit-Remaining': '0',
+      'X-RateLimit-Reset': '1700000000'
+    }
+  );
   await assert.rejects(apiGet('repos/u/r'), (err: unknown) => {
     assert.ok(err instanceof GitHubError);
     assert.equal(err.status, 403);
@@ -116,7 +145,7 @@ test('apiGet reports rate limits with their reset time', async () => {
   });
 });
 
-test('apiGet reports other errors with GitHub\'s message', async () => {
+test("apiGet reports other errors with GitHub's message", async () => {
   respond(404, { message: 'Not Found' });
   await assert.rejects(apiGet('repos/u/missing'), /404: Not Found/);
 });

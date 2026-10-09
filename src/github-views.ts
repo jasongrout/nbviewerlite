@@ -18,11 +18,17 @@ import {
   GITHUB_URL,
   type IContentsEntry,
   rawUrl,
-  repoFromHtmlUrl,
+  repoFromApiUrl,
   sortEntries,
   treeUrl
 } from './github.ts';
-import { breadcrumbs, iconLink, type ILink, refMenu, table } from './listing.ts';
+import {
+  breadcrumbs,
+  iconLink,
+  type ILink,
+  refMenu,
+  table
+} from './listing.ts';
 import { showNotebook } from './notebook-view.ts';
 import { addHeaderLink, h, showStatus } from './page.ts';
 import { encodePath, githubPath } from './route.ts';
@@ -36,16 +42,25 @@ interface IRepoPath {
 
 /** Breadcrumbs from the repo root down to `dir`. */
 function repoCrumbs({ user, repo, ref }: IRepoPath, dir: string): ILink[] {
-  const crumbs = [{ url: viewerUrl(githubPath('tree', user, repo, ref, '')), name: repo }];
+  const crumbs = [
+    { url: viewerUrl(githubPath('tree', user, repo, ref, '')), name: repo }
+  ];
   const parts = dir ? dir.split('/') : [];
   parts.forEach((name, i) => {
     const sub = parts.slice(0, i + 1).join('/');
-    crumbs.push({ url: viewerUrl(githubPath('tree', user, repo, ref, sub)), name });
+    crumbs.push({
+      url: viewerUrl(githubPath('tree', user, repo, ref, sub)),
+      name
+    });
   });
   return crumbs;
 }
 
-function binderUrl(ctx: IContext, { user, repo, ref }: IRepoPath, path?: string) {
+function binderUrl(
+  ctx: IContext,
+  { user, repo, ref }: IRepoPath,
+  path?: string
+) {
   const base = ctx.config.binderUrl;
   if (!base) {
     return null;
@@ -54,7 +69,11 @@ function binderUrl(ctx: IContext, { user, repo, ref }: IRepoPath, path?: string)
   return path ? `${url}?filepath=${encodePath(path)}` : url;
 }
 
-function addCommonLinks(ctx: IContext, githubUrl: string, executorUrl: string | null) {
+function addCommonLinks(
+  ctx: IContext,
+  githubUrl: string,
+  executorUrl: string | null
+) {
   addHeaderLink(githubUrl, 'View on GitHub', 'launch');
   if (executorUrl) {
     addHeaderLink(executorUrl, 'Execute on Binder', 'launch');
@@ -66,9 +85,14 @@ function addCommonLinks(ctx: IContext, githubUrl: string, executorUrl: string | 
  * Whether `path` is a directory: one Contents API request. Redirects to its
  * listing if so.
  */
-async function redirectIfDirectory(ctx: IContext, loc: IRepoPath): Promise<boolean> {
+async function redirectIfDirectory(
+  ctx: IContext,
+  loc: IRepoPath
+): Promise<boolean> {
   try {
-    const { data } = await apiGet(contentsPath(loc.user, loc.repo, loc.path), { ref: loc.ref });
+    const { data } = await apiGet(contentsPath(loc.user, loc.repo, loc.path), {
+      ref: loc.ref
+    });
     if (Array.isArray(data)) {
       redirect(githubPath('tree', loc.user, loc.repo, loc.ref, loc.path));
       return true;
@@ -86,7 +110,10 @@ async function redirectIfDirectory(ctx: IContext, loc: IRepoPath): Promise<boole
  * request. Other files open directly, as nbviewer serves them unchanged;
  * directories redirect to their listing.
  */
-export async function showGithubBlob(ctx: IContext, loc: IRepoPath): Promise<void> {
+export async function showGithubBlob(
+  ctx: IContext,
+  loc: IRepoPath
+): Promise<void> {
   const { user, repo, ref, path } = loc;
   const raw = rawUrl(user, repo, ref, path);
   const filename = path.split('/').pop() ?? path;
@@ -94,17 +121,21 @@ export async function showGithubBlob(ctx: IContext, loc: IRepoPath): Promise<voi
   if (!path.endsWith('.ipynb')) {
     setTitle(filename);
     showStatus(ctx.root, 'Loading…');
-    const exists = await fetch(raw, { method: 'HEAD', credentials: 'omit' }).then(
+    const exists = await fetch(raw, {
+      method: 'HEAD',
+      credentials: 'omit'
+    }).then(
       response => response.ok,
       () => false
     );
     if (exists) {
       window.location.replace(raw);
     } else if (!(await redirectIfDirectory(ctx, loc))) {
-      showFailure(ctx, new Error(`${path} not found in ${user}/${repo} at ${ref}.`), [
-        blobUrl(user, repo, ref, path),
-        'file on GitHub'
-      ]);
+      showFailure(
+        ctx,
+        new Error(`${path} not found in ${user}/${repo} at ${ref}.`),
+        [blobUrl(user, repo, ref, path), 'file on GitHub']
+      );
     }
     return;
   }
@@ -115,9 +146,18 @@ export async function showGithubBlob(ctx: IContext, loc: IRepoPath): Promise<voi
     if (!absolute.startsWith(rawBase)) {
       return absolute;
     }
-    const rest = new URL(absolute).pathname.slice(new URL(rawBase).pathname.length);
-    const target = rest.replace(/\/+$/, '').split('/').map(decodeURIComponent).join('/');
-    return viewerUrl(target ? githubPath('blob', user, repo, ref, target) : githubPath('tree', user, repo, ref, '')
+    const rest = new URL(absolute).pathname.slice(
+      new URL(rawBase).pathname.length
+    );
+    const target = rest
+      .replace(/\/+$/, '')
+      .split('/')
+      .map(decodeURIComponent)
+      .join('/');
+    return viewerUrl(
+      target
+        ? githubPath('blob', user, repo, ref, target)
+        : githubPath('tree', user, repo, ref, '')
     );
   };
 
@@ -134,16 +174,24 @@ export async function showGithubBlob(ctx: IContext, loc: IRepoPath): Promise<voi
 }
 
 /** github/{user}/{repo}/tree/{ref}/{path}/ */
-export async function showGithubTree(ctx: IContext, loc: IRepoPath): Promise<void> {
+export async function showGithubTree(
+  ctx: IContext,
+  loc: IRepoPath
+): Promise<void> {
   const { ref, path } = loc;
   setTitle(path ? `${loc.repo}/${path}` : `${loc.user}/${loc.repo}`);
   showStatus(ctx.root, 'Loading…');
 
   let contents: IContentsEntry[] | IContentsEntry;
   try {
-    ({ data: contents } = await apiGet(contentsPath(loc.user, loc.repo, path), { ref }));
+    ({ data: contents } = await apiGet(contentsPath(loc.user, loc.repo, path), {
+      ref
+    }));
   } catch (err) {
-    showFailure(ctx, err, [treeUrl(loc.user, loc.repo, ref, path), 'directory on GitHub']);
+    showFailure(ctx, err, [
+      treeUrl(loc.user, loc.repo, ref, path),
+      'directory on GitHub'
+    ]);
     return;
   }
   if (!Array.isArray(contents)) {
@@ -151,21 +199,39 @@ export async function showGithubTree(ctx: IContext, loc: IRepoPath): Promise<voi
     return;
   }
 
-  // As in nbviewer, take user and repo from the API's URLs, which follow renames.
-  const { user, repo } = repoFromHtmlUrl(contents[0]?.html_url) ?? loc;
+  // As in nbviewer, take user and repo from the API's URLs, which follow
+  // renames.
+  const { user, repo } = repoFromApiUrl(contents[0]?.url) ?? loc;
   const here: IRepoPath = { user, repo, ref, path };
 
   addCommonLinks(ctx, treeUrl(user, repo, ref, path), binderUrl(ctx, here));
 
   const parent = path
     ? iconLink(
-        viewerUrl(githubPath('tree', user, repo, ref, path.split('/').slice(0, -1).join('/'))),
+        viewerUrl(
+          githubPath(
+            'tree',
+            user,
+            repo,
+            ref,
+            path.split('/').slice(0, -1).join('/')
+          )
+        ),
         'caretUp',
         '..'
       )
-    : iconLink(viewerUrl(`github/${encodeURIComponent(user)}/`), 'caretUp', `${user}'s repositories`);
+    : iconLink(
+        viewerUrl(`github/${encodeURIComponent(user)}/`),
+        'caretUp',
+        `${user}'s repositories`
+      );
 
-  const icons = { dir: 'folder', notebook: 'notebook', file: 'file', submodule: 'folder' } as const;
+  const icons = {
+    dir: 'folder',
+    notebook: 'notebook',
+    file: 'file',
+    submodule: 'folder'
+  } as const;
   const rows = sortEntries(contents).map(({ entry, kind }) => {
     const url =
       kind === 'dir'
@@ -183,36 +249,59 @@ export async function showGithubTree(ctx: IContext, loc: IRepoPath): Promise<voi
       apiGet<{ name: string }[]>(`${repoApi}/tags`, { per_page: '100' })
     ]);
     const toLinks = (refs: { name: string }[]) =>
-      refs.map(({ name }) => ({ name, url: viewerUrl(githubPath('tree', user, repo, name, path)) }));
+      refs.map(({ name }) => ({
+        name,
+        url: viewerUrl(githubPath('tree', user, repo, name, path))
+      }));
     return { branches: toLinks(branches.data), tags: toLinks(tags.data) };
   };
 
   ctx.root.replaceChildren(
-    h('div', { class: 'nbv-listing-header' }, breadcrumbs(repoCrumbs(here, path)), refMenu(ref, loadRefs)),
+    h(
+      'div',
+      { class: 'nbv-listing-header' },
+      breadcrumbs(repoCrumbs(here, path)),
+      refMenu(ref, loadRefs)
+    ),
     table(['Name'], [[parent], ...rows])
   );
 }
 
 /** github/{user}/ : the user's repositories, most recently updated first. */
-export async function showGithubUser(ctx: IContext, user: string): Promise<void> {
+export async function showGithubUser(
+  ctx: IContext,
+  user: string
+): Promise<void> {
   setTitle(`${user}'s repositories`);
   showStatus(ctx.root, 'Loading…');
   const page = new URLSearchParams(window.location.search).get('page');
   let response;
   try {
-    response = await apiGet<{ name: string }[]>(`users/${encodeURIComponent(user)}/repos`, {
-      sort: 'updated',
-      ...(page ? { page } : {})
-    });
+    response = await apiGet<{ name: string }[]>(
+      `users/${encodeURIComponent(user)}/repos`,
+      {
+        sort: 'updated',
+        ...(page ? { page } : {})
+      }
+    );
   } catch (err) {
-    showFailure(ctx, err, [GITHUB_URL + encodeURIComponent(user), 'user on GitHub']);
+    showFailure(ctx, err, [
+      GITHUB_URL + encodeURIComponent(user),
+      'user on GitHub'
+    ]);
     return;
   }
-  addHeaderLink(GITHUB_URL + encodeURIComponent(user), 'View on GitHub', 'launch');
+  addHeaderLink(
+    GITHUB_URL + encodeURIComponent(user),
+    'View on GitHub',
+    'launch'
+  );
   addNbviewerLink(ctx);
   const rows = response.data.map(({ name }) => [
     iconLink(
-      viewerUrl(`github/${encodeURIComponent(user)}/${encodeURIComponent(name)}/`),
+      viewerUrl(
+        `github/${encodeURIComponent(user)}/${encodeURIComponent(name)}/`
+      ),
       'notebook',
       name
     )
@@ -226,15 +315,26 @@ export async function showGithubUser(ctx: IContext, user: string): Promise<void>
 }
 
 /** github/{user}/{repo}/ : redirect to the default branch's listing. */
-export async function showGithubRepo(ctx: IContext, user: string, repo: string): Promise<void> {
+export async function showGithubRepo(
+  ctx: IContext,
+  user: string,
+  repo: string
+): Promise<void> {
   setTitle(`${user}/${repo}`);
   showStatus(ctx.root, 'Loading…');
   try {
-    const { data } = await apiGet<{ name: string; owner: { login: string }; default_branch: string }>(
-      `repos/${encodeURIComponent(user)}/${encodeURIComponent(repo)}`
+    const { data } = await apiGet<{
+      name: string;
+      owner: { login: string };
+      default_branch: string;
+    }>(`repos/${encodeURIComponent(user)}/${encodeURIComponent(repo)}`);
+    redirect(
+      githubPath('tree', data.owner.login, data.name, data.default_branch, '')
     );
-    redirect(githubPath('tree', data.owner.login, data.name, data.default_branch, ''));
   } catch (err) {
-    showFailure(ctx, err, [`${GITHUB_URL}${encodeURIComponent(user)}/${encodeURIComponent(repo)}`, 'repository on GitHub']);
+    showFailure(ctx, err, [
+      `${GITHUB_URL}${encodeURIComponent(user)}/${encodeURIComponent(repo)}`,
+      'repository on GitHub'
+    ]);
   }
 }

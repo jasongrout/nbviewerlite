@@ -33,15 +33,19 @@ over; the nbviewer server and its templates do not.
 
 Netlify and Cloudflare Pages, configured by files in the build output:
 
-- `_redirects`: `/*  /index.html  200`. Status 200 makes it a rewrite, not a
-  redirect: the host returns `index.html`'s contents at the requested URL, so
-  the address bar and `location.pathname` keep the original path, which the
-  app then reads. Files that exist (`/static/...`, `/favicon.ico`) are served
-  as themselves, because rewrites don't apply over existing files ("shadowing").
-  Cloudflare Pages also serves `index.html` for unknown paths by itself when the
-  site has no `404.html`.
-- `_headers`: long-lived caching for content-hashed `/static/` files and
-  basic security headers.
+- Netlify: `_redirects` with `/*  /index.html  200`. Status 200 makes it a
+  rewrite, not a redirect: the host returns `index.html`'s contents at the
+  requested URL, so the address bar and `location.pathname` keep the original
+  path, which the app then reads. Files that exist (`/static/...`,
+  `/favicon.ico`) are served as themselves, because rules don't apply over
+  existing files ("shadowing"). Missing `/static/` files get a 404 instead of
+  the app.
+- Cloudflare Pages: ignores that catch-all rule (it reports an infinite loop)
+  and serves `index.html` for unknown paths by itself, as long as the site has
+  no top-level `404.html`. Missing `/static/` files get `static/404.html`.
+- `_headers`: basic security headers. Hashed assets keep the hosts' default
+  caching (revalidated with ETags): a year-long `immutable` header would also
+  stick to whatever a missing asset path returned.
 - `netlify.toml` (build command and publish directory) and `wrangler.toml`
   (Cloudflare Pages output directory).
 
@@ -101,9 +105,13 @@ listing pages load only the small main bundle.
 ### Trust and security
 
 nbviewer.org runs notebook-supplied HTML and JavaScript on its origin
-(nbconvert inlines them). For parity, nbviewerlite renders outputs as trusted,
-and JavaScript outputs get a jQuery-wrapped `element`, as in the classic
-Notebook. Markdown cells are sanitized, as in JupyterLab. The site holds no
+(nbconvert inlines them). For parity, nbviewerlite renders outputs as trusted.
+JavaScript outputs run like in nbconvert's lab template, which nbviewer.org
+uses: as inline scripts, in document order with scripts in HTML outputs, with
+`element` bound to the output's DOM node (which also gets jQuery's methods
+under names the DOM doesn't use, for classic-notebook outputs). Markdown cells
+are sanitized, as in JupyterLab, but keep `id` and `name` attributes so
+in-page anchors work. The site holds no
 secrets (no cookies, no tokens), so notebook code can't steal anything from
 it. Before anything secret lives on the origin (say, an optional GitHub token
 for higher rate limits), rendering must move into a sandboxed, opaque-origin
@@ -169,6 +177,10 @@ Same behavior as nbviewer's GitHub and gist providers:
 - More MIME renderers: Vega/Vega-Lite, JSON, PDF, Mermaid.
 - `format/script/...` and `format/slides/...` (reveal.js).
 - `metadata._nbviewer.css` themes.
+- HTML files linked from notebooks: nbviewer serves them as pages on its own
+  origin; nbviewerlite opens them on raw.githubusercontent.com, which shows
+  source. A sandboxed iframe could render them, though raw.githubusercontent.com
+  won't serve their CSS and scripts with usable content types.
 - nbviewer.org's front-page showcase and FAQ.
 - Playwright end-to-end tests in CI, with GitHub API fixtures.
 
