@@ -101,6 +101,10 @@ test("an nbformat 3 notebook's script", async ({ page, github }) => {
   expect(createHash('sha256').update(text).digest('hex')).toBe(
     'cc361b25df367fd52eb5fc86055a9ca00ca7069302d0791056aaf447beb91cc2'
   );
+  // highlighted as Python, like the notebook's code cells
+  const keyword = script.getByText('import', { exact: true }).first();
+  await expect(keyword).toBeVisible();
+  expect(await textColor(keyword)).not.toBe(await textColor(script));
   await expect(
     page.getByRole('link', { name: 'Download Script' })
   ).toHaveAttribute('download', 'heat-equation.txt');

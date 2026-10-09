@@ -5,11 +5,11 @@
 
 import {
   CodeMirrorMimeTypeService,
-  EditorLanguageRegistry,
   jupyterHighlightStyle
 } from '@jupyterlab/codemirror';
 import type * as nbformat from '@jupyterlab/nbformat';
 
+import { codeLanguage, defaultLanguages } from './languages.ts';
 import { addHeaderLink, h } from './page.ts';
 import { notebookToScript, scriptFilename } from './script.ts';
 
@@ -35,15 +35,11 @@ export async function showScript(
   root.replaceChildren(...before, h('pre', { class: 'nbv-script' }, code));
 
   // Highlight like JupyterLab's code cells: its CodeMirror languages, theme
-  // colors and highlight style, without an editor.
-  const languages = new EditorLanguageRegistry();
-  for (const language of EditorLanguageRegistry.getDefaultLanguages()) {
-    languages.addLanguage(language);
-  }
+  // colors and highlight style, without an editor, and the notebook view's
+  // language.
+  const languages = defaultLanguages();
   const mime = new CodeMirrorMimeTypeService(languages).getMimeTypeByLanguage(
-    script.python
-      ? { name: 'python' }
-      : (nb.metadata.language_info ?? { name: '' })
+    script.python ? { name: 'python' } : codeLanguage(nb.metadata.language_info)
   );
   const styles = jupyterHighlightStyle.module?.getRules();
   if (styles) {
