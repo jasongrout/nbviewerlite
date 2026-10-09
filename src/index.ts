@@ -1,6 +1,7 @@
 import jQuery from 'jquery';
 
 import {
+  contentLink,
   createContext,
   type IContext,
   readConfig,
@@ -49,10 +50,9 @@ async function showUrl(
     url,
     title: filename,
     linkFor: absolute => {
-      const path = /\.ipynb$/i.test(new URL(absolute).pathname)
-        ? viewerPath(absolute)
-        : null;
-      return path === null ? absolute : viewerUrl(path);
+      const { pathname } = new URL(absolute);
+      const path = /\.ipynb$/i.test(pathname) ? viewerPath(absolute) : null;
+      return path === null ? absolute : contentLink(ctx, path, pathname);
     }
   });
 }
