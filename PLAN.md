@@ -37,7 +37,9 @@ repository by Workers Builds (`npm run build`, then `npx wrangler deploy`).
 
 - Files as themselves (`/static/...`, `/favicon.ico`).
 - Viewer URLs get the app with status 200, through rewrites in `_redirects`:
-  `/url/*`, `/urls/*`, `/github/*` and `/gist/*` to `/`. Status 200 makes them
+  `/url/*`, `/urls/*`, `/github/*`, `/gist/*` and `/format/*` to `/`, and the
+  FAQ's two exact paths, `/faq` and `/faq/` (a rule without `*` matches one
+  path). Status 200 makes them
   rewrites, not redirects: the address bar and `location.pathname` keep the
   original path, which the app then reads. Cloudflare applies rules
   "regardless of whether or not an asset matches the incoming request"
@@ -102,6 +104,11 @@ render with JupyterLab components
 | Code display | `@jupyterlab/codemirror` (read-only CodeMirror 6) |
 | Theme | `@jupyterlab/theme-light-extension` CSS variables |
 | Icons | `@jupyterlab/ui-components` SVG icons (folder, notebook, file, ...) |
+| JSON, PDF, Vega/Vega-Lite outputs | `@jupyterlab/json-extension`, `@jupyterlab/pdf-extension`, `@jupyterlab/vega5-extension` |
+| Mermaid (outputs and Markdown) | `@jupyterlab/mermaid` |
+| ipywidgets | `@jupyter-widgets/html-manager` (with `base`, `controls`, `output`) |
+| Slideshows | reveal.js 6 (theme simple, notes plugin) |
+| FAQ Markdown | `marked` (JupyterLab's Markdown parser) |
 
 The page shell (header, link bar, listings) is a small hand-written HTML/CSS
 layer in JupyterLab's visual language; nbviewer's Bootstrap 3 and LESS build
@@ -113,7 +120,9 @@ Bundled with rspack (JupyterLab's bundler from 4.6 on). `@jupyterlab/*` at
 the latest stable release; the toolchain at the versions JupyterLab itself
 uses (rspack 1.7, TypeScript 5.9, css-loader 6, style-loader 3).
 `package-lock.json` is committed. The rendering code is a separate chunk, so
-listing pages load only the small main bundle.
+listing pages load only the small main bundle. Heavier libraries load only
+for notebooks that need them: vega-embed (with Vega and Vega-Lite), Mermaid,
+the JSON tree, the widget manager, reveal.js (slides) and marked (FAQ).
 
 ### Trust and security
 
@@ -124,7 +133,13 @@ uses: as inline scripts, in document order with scripts in HTML outputs, with
 `element` bound to the output's DOM node (which also gets jQuery's methods
 under names the DOM doesn't use, for classic-notebook outputs). Markdown cells
 are sanitized, as in JupyterLab, but keep `id` and `name` attributes so
-in-page anchors work. The site holds no
+in-page anchors work. ipywidgets render from saved state with
+`@jupyter-widgets/html-manager`; like nbconvert's template, it loads
+third-party widget libraries named in the notebook from jsDelivr and runs
+them on the page, which is no more than a JavaScript output can do. HTML
+files from repositories and gists are different: they render in a sandboxed
+`<iframe srcdoc>` without `allow-same-origin`, so they get an opaque origin
+and can't reach the site's DOM or storage. The site holds no
 secrets (no cookies, no tokens), so notebook code can't steal anything from
 it. Before anything secret lives on the origin (say, an optional GitHub token
 for higher rate limits), rendering must move into a sandboxed, opaque-origin
@@ -141,6 +156,13 @@ iframe (phase 4).
 - Unauthenticated GitHub API: 60 requests per hour per visitor IP. Notebook
   views use raw.githubusercontent.com instead (no API quota); directory
   listings cost one request, repo pages one more, gists one.
+- HTML files: raw.githubusercontent.com serves everything as `text/plain`
+  with `nosniff`, so stylesheets and scripts from the same repository are
+  fetched and inlined (as data: URLs; at most 32 files and 10 MB per page).
+  Ones a page adds at run time with relative URLs (`document.write`,
+  RequireJS paths, module imports) don't load, nor do frames of other repo
+  files (raw.githubusercontent.com forbids framing). The frame has a fixed
+  height, the window below the header.
 
 ## Phases
 
@@ -152,8 +174,8 @@ iframe (phase 4).
   README with deploy steps.
 - Router for `url/{host}/{path}` and `urls/{host}/{path}` (with nbviewer's
   encoding of query strings as a trailing `%3F...` segment).
-- Fetch in the browser, with clear errors (CORS, HTTP status, invalid JSON,
-  nbformat < 4) that link to the file and to nbviewer.org.
+- Fetch in the browser, with clear errors (CORS, HTTP status, invalid JSON)
+  that link to the file and to nbviewer.org.
 - Render with `StaticNotebook`: trusted outputs, MathJax, syntax
   highlighting, every cell laid out; notebook JSON normalized as
   jupyter_server does (nbformat's `rejoin_lines`); `#heading` links scroll to
@@ -183,24 +205,53 @@ Same behavior as nbviewer's GitHub and gist providers:
 - Links: View on GitHub / Gist, Execute on Binder.
 - Rate-limit errors say when the limit resets.
 
-### Phase 3: format and output parity
+### Phase 3: format and output parity (done)
 
-- nbformat 3 to 4 conversion in the browser (port of `nbformat.v4.convert`).
-- ipywidgets from saved widget state (`@jupyter-widgets/html-manager`).
-- More MIME renderers: Vega/Vega-Lite, JSON, PDF, Mermaid.
-- `format/script/...` and `format/slides/...` (reveal.js).
-- `metadata._nbviewer.css` themes.
-- HTML files linked from notebooks: nbviewer serves them as pages on its own
-  origin; nbviewerlite opens them on raw.githubusercontent.com, which shows
-  source. A sandboxed iframe could render them, though raw.githubusercontent.com
-  won't serve their CSS and scripts with usable content types.
-- nbviewer.org's front-page showcase and FAQ.
-- Playwright end-to-end tests in CI, with GitHub API fixtures.
+- nbformat 1, 2 and 3 notebooks upgrade to nbformat 4 in the browser
+  (`src/convert.ts`): a port of Python nbformat's readers (`rejoin_lines`)
+  and upgrades, tested against nbformat's own output. Code in notebooks
+  that don't name their language (all nbformat 3 ones) is highlighted as
+  Python, like nbconvert's default lexer.
+- JupyterLab's other MIME renderers: JSON, PDF, Vega 5 and Vega-Lite 3 to 5,
+  Mermaid (outputs and fenced blocks in Markdown), with JupyterLab's ranks.
+  These differ from nbviewer.org, whose template shows fallbacks (text or an
+  image) for Vega, JSON and PDF.
+- ipywidgets 7 and 8 from the notebook's saved widget state, with
+  `@jupyter-widgets/html-manager` (one manager per notebook; a lazily loaded
+  chunk). Widget views without saved state show their next MIME type, as
+  nbconvert does; third-party widget libraries load through RequireJS from
+  jsDelivr, and failures show in the output.
+- `format/{html,slides,script}/...`: every provider path, as in nbviewer;
+  redirects keep the format, listings show as usual, and notebook pages link
+  to the formats that apply ("View as Slides" only with slide metadata).
+  - Script: a port of nbconvert's ScriptExporter: the python template (with
+    IPython's transformations of magics, shell escapes and help) when
+    `language_info.nbconvert_exporter` is `python`, otherwise the generic one
+    with `language_info.file_extension`. Shown highlighted, with a download
+    link: a page, where nbviewer.org answers with `text/plain`.
+  - Slides: cells grouped as nbconvert does (slides, subslides, fragments,
+    notes, skipped cells). The notebook renders once with JupyterLab and the
+    cell nodes move into reveal.js sections, so every output type works.
+- HTML files in repositories and gists render in a sandboxed iframe (see
+  Trust and security, and Limits of fetching in the browser). Links to
+  notebooks, HTML files and directories in the repo open in the viewer.
+- The landing page shows nbviewer.org's examples (`src/frontpage.json`,
+  thumbnails in `/static/img/example-nb/`); `/faq` is nbviewer's FAQ adapted
+  to nbviewer lite (`src/faq.md`).
+- Playwright end-to-end tests (`test/e2e/`), with fixtures for every remote
+  host. The GitHub Actions workflow that runs them still has to be added by
+  someone whose token can change `.github/workflows/`.
+- Not done: `metadata._nbviewer.css` themes. nbviewer's template for them is
+  broken (it links `css/theme/{{css_theme}}.css` literally), so nbviewer.org
+  ignores the setting too.
 
 ### Phase 4: hardening and rollout
 
 - Sandboxed, opaque-origin iframe for notebook content; then optional
   user-supplied GitHub tokens.
+- A Content-Security-Policy, if it can be made to fit: `srcdoc` frames
+  inherit the page's policy, so the HTML file view needs inline and data:
+  scripts and styles, or its own origin.
 - GitHub Enterprise hosts as build-time config.
 - Decide on indexing (pages start as `noindex`), analytics, and whether
   nbviewer.org should send some traffic (bots, say) to nbviewerlite.
