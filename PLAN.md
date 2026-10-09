@@ -253,11 +253,106 @@ Same behavior as nbviewer's GitHub and gist providers:
 
 ### Phase 4: hardening and rollout
 
-- Sandboxed, opaque-origin iframe for notebook content; then optional
-  user-supplied GitHub tokens.
-- A Content-Security-Policy, if it can be made to fit: `srcdoc` frames
-  inherit the page's policy, so the HTML file view needs inline and data:
-  scripts and styles, or its own origin.
-- GitHub Enterprise hosts as build-time config.
-- Decide on indexing (pages start as `noindex`), analytics, and whether
-  nbviewer.org should send some traffic (bots, say) to nbviewerlite.
+Isolating notebook content comes before tokens; the other items are
+independent of each other. Suggested order: indexing and analytics
+decisions; nbviewer.org's fallback on rate-limit exhaustion; the sandboxed
+frame; tokens, then a Content-Security-Policy; GitHub Enterprise on demand.
+
+**Notebook content in a sandboxed iframe, then optional GitHub tokens.**
+Notebook HTML and JavaScript run on the site's origin, as on nbviewer.org,
+which is acceptable only while the origin holds nothing worth stealing. A
+token in localStorage would be readable by any notebook.
+
+- The page around the notebook (header, links, routing, fetching, errors)
+  stays on the site's origin. Notebooks render in an iframe with `sandbox`
+  but without `allow-same-origin`, an opaque origin like the HTML file
+  view's. The page fetches the notebook (with the token, if any) and posts
+  the parsed JSON to the frame; the frame never sees the token.
+- The frame is its own page (`frame.html`) loading the render bundle; a
+  `srcdoc` frame resolves relative asset URLs awkwardly. From an opaque
+  origin, every font and script is a cross-origin request, so `/static/`
+  needs `Access-Control-Allow-Origin` (in `_headers`). Alternative: serve the
+  frame from a second registrable domain (the githubusercontent.com
+  pattern) with `allow-same-origin`, which gives it a real origin of its own.
+- Across the boundary: the frame reports its height (`ResizeObserver`,
+  `postMessage`) so the page doesn't scroll twice; relative links navigate
+  the top window (`target=_top` with
+  `allow-top-navigation-by-user-activation`, or a message); fragments go
+  both ways, since the page owns the URL. `format/slides/` moves into the
+  frame with reveal's hash and keyboard focus.
+- What notebooks lose: widgets, RequireJS and CDN loads keep working
+  (jsDelivr answers `Origin: null`), but localStorage, cookies and
+  `window.parent` don't exist for them; Chrome refuses its PDF viewer in
+  sandboxed frames (so `application/pdf` needs the second-domain option or
+  a link); clipboard and downloads need `clipboard-write` and
+  `allow-downloads`.
+- Tokens, after that: a read-only fine-grained personal access token that
+  the visitor pastes into a settings page, kept in localStorage. It raises
+  the API limit from 60 to 5,000 requests per hour, and makes private
+  repositories viewable for its holder; raw.githubusercontent.com doesn't
+  take an `Authorization` header across origins, so private notebooks load
+  through the Contents API (`Accept: application/vnd.github.raw+json`).
+  "Sign in with GitHub" needs a token-exchange function (e.g. a Worker
+  script), because GitHub's OAuth token endpoints (web and device flow)
+  send no CORS headers: it would be the project's first server code. Never
+  put tokens in URLs; keep `Referrer-Policy` strict.
+
+**A Content-Security-Policy.** Defense in depth for the page once it holds
+a token; before isolation it adds little, since notebook JavaScript runs on
+the page by design.
+
+- A strict policy for the page (scripts from `'self'`; connections to
+  GitHub and the configured hosts) and a permissive one for the frame
+  (inline scripts, `eval` for some widget libraries, `data:`, CDNs), per
+  path in `_headers`.
+- `srcdoc` frames inherit the page's policy: the HTML file view needs one
+  that allows inline and `data:` scripts and styles, or a page and origin of
+  its own, as above.
+- Most of the work: listing every origin the app talks to (GitHub API, raw,
+  gists, jsDelivr, Google Fonts for slides) and running the end-to-end
+  tests under the policy.
+
+**GitHub Enterprise hosts as build-time config.** nbviewer supports one
+instance through `GITHUB_API_URL`; organizations running nbviewer for
+GitHub Enterprise Server could use a static deployment instead.
+
+- Build variables for the API, raw and web URLs replace the constants in
+  `src/github.ts`; `/github/` points at the configured instance, one per
+  deployment, as in nbviewer. Landing-page examples and the nbviewer.org
+  link follow the configuration or turn off.
+- What decides feasibility: whether the instance's API and raw endpoints
+  send CORS headers to the site (likely an allowlist, or a proxy); most
+  instances are private, so tokens (above), and probably OAuth through the
+  instance, with the same CORS problem; raw URLs at `/raw/` or on a raw
+  subdomain, depending on subdomain isolation.
+
+**Indexing, analytics, and how nbviewer.org uses nbviewer lite.**
+
+- Indexing: pages start as `noindex`. Googlebot runs JavaScript, so it
+  could index rendered notebooks (fetching from GitHub from Google's IPs),
+  but nbviewer.org's pages are already indexed: stay `noindex`, or point to
+  nbviewer.org with `<link rel="canonical">`. Error pages answer 200 under
+  viewer prefixes; once indexed, they should add `noindex` at run time.
+  Crawlers without JavaScript see an empty page.
+- Analytics: failure rates matter most (CORS failures on `/url/`, rate
+  limits, rendering failures). Cloudflare's request analytics need no
+  client script but see only paths; Cloudflare Web Analytics is a
+  cookieless beacon for page views; reporting error kinds without
+  identifiers needs a small endpoint (server code again). The FAQ should say
+  what's collected.
+- Traffic from nbviewer.org, in increasing reach:
+  - a "View in nbviewer lite" link on its pages;
+  - redirect to the same path here when its GitHub API quota is exhausted,
+    instead of an error page: visitors then spend their own quota. Our
+    error pages link back to nbviewer.org, so the redirect needs a marker
+    (e.g. `?from=nbviewer`) that suppresses the way back;
+  - redirect the views that cost it API requests on every uncached visit
+    (directory listings, user and repo pages), keeping notebook renders,
+    which it caches;
+  - bots by user agent: sheds load from scrapers, but crawlers without
+    JavaScript get nothing to index;
+  - a percentage of visitors, with an opt-out cookie, watching failure
+    rates.
+- Before redirecting anyone: parity gaps go through the error pages' links
+  to nbviewer.org; URLs stay identical; agree with nbviewer.org's
+  maintainers on who runs the domain and the hosting account.
