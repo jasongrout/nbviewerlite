@@ -1,11 +1,19 @@
 /**
- * How the static host and the app answer URLs: status codes, nbviewer's
- * redirects, and the landing page form.
+ * How the static host and the app answer URLs: status codes, headers,
+ * nbviewer's redirects, and the landing page form.
  */
 
 import type { Page } from '@playwright/test';
 
-import { expect, type GitHub, markdown, notebook, test } from './fixtures.ts';
+import {
+  code,
+  displayData,
+  expect,
+  type GitHub,
+  markdown,
+  notebook,
+  test
+} from './fixtures.ts';
 
 const GIST = '0123456789abcdef0123';
 
@@ -60,6 +68,68 @@ test.describe('status codes', () => {
     await expect(page.getByRole('alert')).toContainText(
       'fetching https://nb.example/missing.ipynb'
     );
+  });
+});
+
+test.describe('headers', () => {
+  test('every response has the ones from _headers', async ({ request }) => {
+    const paths = [
+      '/',
+      '/github/ipython/ipython/blob/main/docs/a.ipynb',
+      '/robots.txt',
+      '/nonsense/path',
+      '/static/js/missing.js'
+    ];
+    for (const path of paths) {
+      const response = await request.get(path);
+      expect(response.headers(), path).toMatchObject({
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'strict-origin-when-cross-origin',
+        'permissions-policy': expect.stringContaining(
+          'camera=(), microphone=(), geolocation=()'
+        )
+      });
+    }
+  });
+
+  test('the files that set them are not served', async ({ request }) => {
+    expect((await request.get('/_headers')).status()).toBe(404);
+    expect((await request.get('/_redirects')).status()).toBe(404);
+  });
+
+  test.describe('with geolocation allowed for the site', () => {
+    test.use({
+      permissions: ['geolocation'],
+      geolocation: { latitude: 48.1, longitude: 11.6 }
+    });
+
+    test('notebooks still get no location, but can go fullscreen', async ({
+      page,
+      web
+    }) => {
+      web.file(
+        'https://nb.example/where.ipynb',
+        notebook([
+          code('where()', [
+            displayData({
+              'application/javascript':
+                'navigator.geolocation.getCurrentPosition(\n' +
+                '  () => (element.textContent = "located"),\n' +
+                '  error => (element.textContent = error.message)\n' +
+                ');'
+            })
+          ])
+        ])
+      );
+      await page.goto('/urls/nb.example/where.ipynb');
+      await expect(
+        page.getByText(
+          'Geolocation has been disabled in this document by permissions policy.'
+        )
+      ).toBeVisible();
+      // slides and some outputs use it
+      expect(await page.evaluate(() => document.fullscreenEnabled)).toBe(true);
+    });
   });
 });
 

@@ -72,22 +72,28 @@ in the tests (`test/convert.test.ts`) and in `test/fixtures/generate.py`.
 The site runs on Cloudflare Workers, as static assets (no Worker code).
 `npm run build` writes the site to `dist/`, and `wrangler.toml` serves it:
 
-- files as themselves: content-hashed assets under `/static/`, `favicon.ico`,
-  `robots.txt`;
+- files as themselves: `favicon.ico`, `robots.txt`, and the assets under
+  `/static/`. Most of those are content-hashed (scripts, fonts, images), but
+  not all (RequireJS, named by its version, and the front-page thumbnails),
+  so they keep the default caching, revalidated with ETags;
 - viewer URLs (`/url/...`, `/urls/...`, `/github/...`, `/gist/...`,
   `/format/...`) and the FAQ (`/faq`, `/faq/`) get the app, with status 200,
   through the rewrites in `_redirects` (`/github/*  /  200`, ...; a rule
-  without `*` matches one exact path, hence two for the FAQ). The browser keeps the requested URL, which the
-  app reads. The rules point at `/` rather than `/index.html`, which
-  Cloudflare rejects as an infinite loop;
+  without `*` matches one exact path, hence two for the FAQ). The browser
+  keeps the requested URL, which the app reads. The rules point at `/`
+  rather than `/index.html`, which Cloudflare rejects as an infinite loop;
 - every other unknown path gets the nearest `404.html` with status 404
   (`not_found_handling = "404-page"`): the top-level one is a copy of the
   app, which shows "not found" or redirects nbviewer's old bare gist-id URLs
   (`/{id}`) to `/gist/{id}`; under `/static/` it's `static/404.html`;
-- headers from `_headers`.
+- every response gets the headers in `_headers`, including a
+  `Permissions-Policy` that keeps notebooks from using the camera,
+  microphone, location and other powerful features (see
+  [PLAN.md](PLAN.md#trust-and-security)).
 
-New URL prefixes need a rule in `public/_redirects` (and in
-`scripts/preview.mjs`). The site must be served from the root of its domain.
+New URL prefixes need a rule in `public/_redirects`, and in
+`scripts/preview.mjs` (which reads `_headers`, but not `_redirects`). The
+site must be served from the root of its domain.
 
 ### Cloudflare
 
@@ -117,10 +123,11 @@ A local build can also be deployed directly: `npx wrangler deploy`, after
 
 ### Other hosts
 
-- **Netlify:** reads the same `_redirects` file and `404.html`;
-  `netlify.toml` has the build settings.
+- **Netlify:** reads the same `_redirects` and `_headers` files, and serves
+  `404.html` for unknown paths; `netlify.toml` has the build settings.
 - Others need the same rewrites, or at least `index.html` (status 200) for
-  every path that isn't a file, e.g. nginx with `try_files $uri /index.html;`.
+  every path that isn't a file, e.g. nginx with `try_files $uri /index.html;`,
+  and the headers from `_headers`.
 
 ### Build settings
 

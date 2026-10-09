@@ -87,6 +87,10 @@ Jupyter's `nbformat` library upgrades them.
 Outputs render with JupyterLab's renderers: HTML, Markdown, LaTeX math, images,
 SVG, PDF, JSON, Vega and Vega-Lite charts, Mermaid diagrams and JavaScript.
 
+HTML files in GitHub repositories and gists show as web pages, as on
+nbviewer.org, with the stylesheets and scripts they load from the same
+repository. They run in a sandboxed frame, apart from the rest of the site.
+
 ## Can nbviewer lite run my Python, Julia, R, Scala, etc. notebooks?
 
 No. Like nbviewer, it doesn't execute notebooks. It only shows the inputs and
@@ -123,7 +127,8 @@ request to help fix it.
 Yes, as on nbviewer.org. This lets plots from Plotly, Bokeh and Altair remain
 interactive, for example. It also means that arbitrary JavaScript may execute
 when you visit the page, as it would on any page you visit on the Internet. The
-site keeps no cookies, accounts or other secrets for that JavaScript to read.
+site keeps no cookies, accounts or other secrets for that JavaScript to read,
+and doesn't let it use your camera, microphone or location.
 
 ## Do interactive widgets work?
 

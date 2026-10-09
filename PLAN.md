@@ -39,33 +39,36 @@ repository by Workers Builds (`npm run build`, then `npx wrangler deploy`).
 - Viewer URLs get the app with status 200, through rewrites in `_redirects`:
   `/url/*`, `/urls/*`, `/github/*`, `/gist/*` and `/format/*` to `/`, and the
   FAQ's two exact paths, `/faq` and `/faq/` (a rule without `*` matches one
-  path). Status 200 makes them
-  rewrites, not redirects: the address bar and `location.pathname` keep the
-  original path, which the app then reads. Cloudflare applies rules
-  "regardless of whether or not an asset matches the incoming request"
+  path). Status 200 makes them rewrites, not redirects: the address bar and
+  `location.pathname` keep the original path, which the app then reads.
+  Cloudflare applies rules "regardless of whether or not an asset matches
+  the incoming request"
   ([docs](https://developers.cloudflare.com/pages/configuration/redirects/)),
   which is fine because no files live under these prefixes; a catch-all `/*`
-  would also capture the assets (Cloudflare rejects it as an infinite loop, as
-  it does any rule pointing at `/index.html`, hence `/`).
+  would also capture the assets (Cloudflare rejects it as an infinite loop,
+  as it does any rule pointing at `/index.html`, hence `/`).
 - Every other unknown path gets `404.html` (`not_found_handling =
   "404-page"`), which is the app too, with status 404: unknown URLs are real
   404s, and nbviewer's old bare gist-id URLs (`/{id}`, which no rule can match
   without also matching `/favicon.ico`) still work, because the app redirects
   them to `/gist/{id}`.
 - Missing `/static/` files get `static/404.html` (status 404), not the app.
-- `_headers`: basic security headers. Hashed assets keep the default caching
-  (revalidated with ETags): a year-long `immutable` header would also stick
-  to whatever a missing asset path returned.
+- `_headers`: basic security headers, and a `Permissions-Policy` (see Trust
+  and security), on every response. Assets keep the default caching
+  (revalidated with ETags): not everything under `/static/` is
+  content-hashed (RequireJS carries its version instead, and the front-page
+  thumbnails aren't), and a year-long `immutable` header would also stick to
+  whatever a missing asset path returned.
 - `wrangler.toml` names the Worker and its assets directory, and
   `.node-version` pins Node.js for the build. (Cloudflare Pages would serve
   the same files the same way, with `pages_build_output_dir` instead.)
 
 Locally, `npm run preview` (a small Node server) and `npx wrangler dev`
-(Cloudflare's emulator) serve the build the same way. Netlify reads the
-same `_redirects` and `404.html`. Other hosts need the same rewrites, or at
-least `index.html` for every path that isn't a file (nginx `try_files $uri
-/index.html`). GitHub Pages can't rewrite; its `404.html` workaround answers
-every viewer URL with HTTP 404.
+(Cloudflare's emulator) serve the build the same way, headers included.
+Netlify reads the same `_redirects`, `_headers` and `404.html`. Other hosts
+need the same rewrites, or at least `index.html` for every path that isn't
+a file (nginx `try_files $uri /index.html`). GitHub Pages can't rewrite;
+its `404.html` workaround answers every viewer URL with HTTP 404.
 
 Consequences of being static:
 
@@ -83,10 +86,11 @@ Consequences of being static:
 ```
 browser                                   static host (Cloudflare)
 -------                                   ----------------------------------
-GET /github/u/r/blob/main/a.ipynb  ---->  no such file: rewrite -> index.html (200)
+GET /github/u/r/blob/main/a.ipynb  ---->  _redirects rewrite: index.html (200)
 GET /static/js/main.<hash>.js      ---->  file
+GET /some/other/path               ---->  404.html (the app too; 404)
 app reads location.pathname
-  -> route: url | urls | github | gist
+  -> route: [format/{html,slides,script}/] url | urls | github | gist; faq
 fetch(raw.githubusercontent.com/...)  --> GitHub raw CDN (CORS: *; no API quota)
 fetch(api.github.com/...)             --> GitHub REST API (CORS: *; 60/h per IP)
 fetch(https://host/path.ipynb)        --> any host that sends CORS headers
@@ -139,11 +143,17 @@ third-party widget libraries named in the notebook from jsDelivr and runs
 them on the page, which is no more than a JavaScript output can do. HTML
 files from repositories and gists are different: they render in a sandboxed
 `<iframe srcdoc>` without `allow-same-origin`, so they get an opaque origin
-and can't reach the site's DOM or storage. The site holds no
-secrets (no cookies, no tokens), so notebook code can't steal anything from
-it. Before anything secret lives on the origin (say, an optional GitHub token
-for higher rate limits), rendering must move into a sandboxed, opaque-origin
+and can't reach the site's DOM or storage. The site holds no secrets (no
+cookies, no tokens), so notebook code can't steal anything from it. Before
+anything secret lives on the origin (say, an optional GitHub token for
+higher rate limits), rendering must move into a sandboxed, opaque-origin
 iframe (phase 4).
+
+Browsers grant permissions per origin, so one that a visitor gives a
+notebook (their location, say) would hold for every notebook. `_headers`
+sends a `Permissions-Policy` that turns off camera, microphone,
+geolocation, screen capture, MIDI, USB, serial, HID and payment requests
+for the whole site; fullscreen stays on, for slides and outputs.
 
 ### Limits of fetching in the browser
 
@@ -228,8 +238,9 @@ Same behavior as nbviewer's GitHub and gist providers:
   nbconvert does; third-party widget libraries load through RequireJS from
   jsDelivr, and failures show in the output.
 - `format/{html,slides,script}/...`: every provider path, as in nbviewer;
-  redirects keep the format, listings show as usual, and notebook pages link
-  to the formats that apply ("View as Slides" only with slide metadata).
+  redirects and links in notebooks and HTML files keep the format, listings
+  show as usual, and notebook pages link to the formats that apply ("View
+  as Slides" only with slide metadata).
   - Script: a port of nbconvert's ScriptExporter: the python template (with
     IPython's transformations of magics, shell escapes and help) when
     `language_info.nbconvert_exporter` is `python`, otherwise the generic one
@@ -238,6 +249,7 @@ Same behavior as nbviewer's GitHub and gist providers:
   - Slides: cells grouped as nbconvert does (slides, subslides, fragments,
     notes, skipped cells). The notebook renders once with JupyterLab and the
     cell nodes move into reveal.js sections, so every output type works.
+    The theme's fonts come from the site, not from Google Fonts.
 - HTML files in repositories and gists render in a sandboxed iframe (see
   Trust and security, and Limits of fetching in the browser). Links to
   notebooks, HTML files and directories in the repo open in the viewer.
@@ -309,8 +321,7 @@ the page by design.
   that allows inline and `data:` scripts and styles, or a page and origin of
   its own, as above.
 - Most of the work: listing every origin the app talks to (GitHub API, raw,
-  gists, jsDelivr, Google Fonts for slides) and running the end-to-end
-  tests under the policy.
+  gists, jsDelivr) and running the end-to-end tests under the policy.
 
 **GitHub Enterprise hosts as build-time config.** nbviewer supports one
 instance through `GITHUB_API_URL`; organizations running nbviewer for
