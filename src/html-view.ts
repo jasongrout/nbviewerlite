@@ -26,7 +26,7 @@ import { addHeaderLink, addMenuLink, h, link, showStatus } from './page.ts';
 export interface IHtmlSource {
   /** The file's raw URL; relative URLs in it resolve against this. */
   url: string;
-  /** Page title, usually the file name. */
+  /** The file name: the page title, and the last breadcrumb. */
   title: string;
   /** The file's text. Defaults to fetching `url`. */
   load?: () => Promise<string>;

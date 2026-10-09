@@ -232,6 +232,11 @@ a.nbv-link:hover {
   border-radius: 4px;
 }
 
+/* a name too long for the bar breaks rather than widen the page */
+.nbv-breadcrumbs li {
+  overflow-wrap: anywhere;
+}
+
 .nbv-breadcrumbs li + li::before {
   content: '/';
   padding: 0 8px;

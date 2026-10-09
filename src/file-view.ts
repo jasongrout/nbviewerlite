@@ -11,8 +11,11 @@ import { fetchText, LoadError } from './load.ts';
 export interface IFileSource {
   /** Where the file lives. */
   url: string;
+  /** The file name: the page title, and the last breadcrumb. */
+  title: string;
   /** The file's text. Defaults to fetching `url`. */
   load?: () => Promise<string>;
+  /** Links to the directories above the file, from the top. */
   breadcrumbs?: ILink[];
   /**
    * Called when loading fails with HTTP 404, before showing the error.
@@ -49,7 +52,11 @@ export async function loadFile<T>(
   }
 }
 
-/** The breadcrumbs above the file, if it has any. */
+/**
+ * The breadcrumbs above the file: its directories, if it has any, and its
+ * name.
+ */
 export function fileCrumbs(source: IFileSource): HTMLElement[] {
-  return source.breadcrumbs?.length ? [breadcrumbs(source.breadcrumbs)] : [];
+  const dirs = source.breadcrumbs ?? [];
+  return dirs.length || source.title ? [breadcrumbs(dirs, source.title)] : [];
 }

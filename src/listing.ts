@@ -11,17 +11,18 @@ export interface ILink {
   name: string;
 }
 
-export function breadcrumbs(crumbs: ILink[]): HTMLElement {
+/** Links up to the page, then `current`, the page's own name, if given. */
+export function breadcrumbs(crumbs: ILink[], current?: string): HTMLElement {
+  const items = crumbs.map(crumb =>
+    h('li', {}, h('a', { href: crumb.url }, crumb.name))
+  );
+  if (current) {
+    items.push(h('li', { 'aria-current': 'page' }, current));
+  }
   return h(
     'nav',
     { class: 'nbv-breadcrumbs', 'aria-label': 'Breadcrumb' },
-    h(
-      'ol',
-      {},
-      ...crumbs.map(crumb =>
-        h('li', {}, h('a', { href: crumb.url }, crumb.name))
-      )
-    )
+    h('ol', {}, ...items)
   );
 }
 

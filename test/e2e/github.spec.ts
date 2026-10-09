@@ -260,6 +260,17 @@ test.describe('notebooks', () => {
         '/github/ipython/ipython/tree/6.x/examples/IPython%20Kernel/'
       ]
     ]);
+    // then the notebook's own name, as the current page
+    const crumbs = page
+      .getByRole('navigation', { name: 'Breadcrumb' })
+      .getByRole('listitem');
+    await expect(crumbs).toHaveText([
+      'ipython',
+      'examples',
+      'IPython Kernel',
+      'Index.ipynb'
+    ]);
+    await expect(crumbs.last()).toHaveAttribute('aria-current', 'page');
     expect(github.requests).toEqual([]);
   });
 
