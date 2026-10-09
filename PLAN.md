@@ -50,11 +50,16 @@ Pages serves `dist/`:
 Locally, `npm run preview` (a small Node server) and `npx wrangler pages dev
 dist` (Cloudflare's emulator) serve the build the same way.
 
+There is no `_redirects` file. Pages applies its rules "regardless of
+whether or not an asset matches the incoming request", so `/*  /index.html
+200` would also replace the assets (Pages reports it as an infinite loop and
+ignores it), and it doesn't support rewrites with other status codes, such as
+404 ([Pages redirects docs](https://developers.cloudflare.com/pages/configuration/redirects/)).
+
 Other hosts work if they can rewrite unknown paths to `index.html`:
-`netlify.toml` has Netlify's settings and rules (`/*  /index.html  200`;
-Cloudflare Pages rejects that rule as an infinite loop, which is why it isn't
-in a `_redirects` file); nginx needs `try_files $uri /index.html`. GitHub
-Pages can't rewrite; its `404.html` workaround answers with HTTP 404.
+`netlify.toml` has Netlify's settings and rules (Netlify applies them only
+where no file exists); nginx needs `try_files $uri /index.html`. GitHub Pages
+can't rewrite; its `404.html` workaround answers with HTTP 404.
 
 Consequences of being static:
 
