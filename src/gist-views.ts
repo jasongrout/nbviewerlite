@@ -12,6 +12,8 @@ import {
   viewerUrl
 } from './context.ts';
 import { apiGet, GIST_URL, gistFileAnchor, gistFileName } from './github.ts';
+import { isHtmlFile } from './html.ts';
+import { showHtml } from './html-view.ts';
 import { iconLink, table } from './listing.ts';
 import { fetchText, showNotebook } from './notebook-view.ts';
 import { addHeaderLink, h, showStatus } from './page.ts';
@@ -97,14 +99,26 @@ export async function showGist(
       ? gist.files[target]
       : null;
   };
-  // Notebooks in the gist open in the viewer.
+  // Notebooks and HTML files in the gist open in the viewer.
   const viewerLink = (url: string) => {
     const target = fileFor(url)?.filename;
-    return target?.endsWith('.ipynb')
+    return target && (target.endsWith('.ipynb') || isHtmlFile(target))
       ? viewerUrl(gistPath(user, gist.id, target)) + new URL(url).hash
       : null;
   };
 
+  if (isHtmlFile(name)) {
+    // nbviewer serves HTML files of a gist as pages
+    await showHtml(ctx, {
+      url: file.raw_url,
+      title: name,
+      load,
+      inlineUrl: url => fileFor(url)?.raw_url ?? null,
+      linkFor: viewerLink,
+      provider: [gist.html_url, 'Gist']
+    });
+    return;
+  }
   if (manyFiles && !name.endsWith('.ipynb')) {
     // nbviewer serves other files of a gist unchanged
     window.location.replace(file.raw_url);

@@ -19,10 +19,13 @@ import {
   type IContentsEntry,
   rawUrl,
   repoFromApiUrl,
+  repoPathOf,
   repoViewerPath,
   sortEntries,
   treeUrl
 } from './github.ts';
+import { isHtmlFile } from './html.ts';
+import { showHtml } from './html-view.ts';
 import {
   breadcrumbs,
   iconLink,
@@ -108,8 +111,9 @@ async function redirectIfDirectory(
  * github/{user}/{repo}/blob/{ref}/{path}
  *
  * Notebooks are read from raw.githubusercontent.com, which needs no API
- * request. Other files open directly, as nbviewer serves them unchanged;
- * directories redirect to their listing.
+ * request. HTML files render as pages, as nbviewer serves them. Other files
+ * open directly, as nbviewer serves them unchanged; directories redirect to
+ * their listing.
  */
 export async function showGithubBlob(
   ctx: IContext,
@@ -125,6 +129,21 @@ export async function showGithubBlob(
     const target = repoViewerPath(url, user, repo, ref);
     return target === null ? null : viewerUrl(target);
   };
+
+  if (isHtmlFile(path)) {
+    const rawBase = rawUrl(user, repo, ref, '');
+    await showHtml(ctx, {
+      url: raw,
+      title: filename,
+      // the repo's own stylesheets and scripts, at this ref
+      inlineUrl: url => (repoPathOf(url, rawBase) === null ? null : url),
+      linkFor: viewerLink,
+      breadcrumbs: repoCrumbs(loc, dir),
+      provider: [blobUrl(user, repo, ref, path), 'GitHub'],
+      onNotFound: () => redirectIfDirectory(ctx, loc)
+    });
+    return;
+  }
 
   if (!path.endsWith('.ipynb')) {
     setTitle(filename);

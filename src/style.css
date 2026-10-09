@@ -249,3 +249,14 @@ a.nbv-link:hover {
 .nbv-gist-description {
   color: #616161;
 }
+
+/* HTML files (html-view.ts sets the height: the rest of the window). */
+
+.nbv-html-frame {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+}
