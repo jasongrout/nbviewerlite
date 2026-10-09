@@ -538,6 +538,50 @@ test.describe('format/slides/', () => {
       await expect.poll(() => bottom(last)).toBeLessThanOrEqual(deckBottom);
     });
   }
+
+  test('progress bar widgets show', async ({ page, web }) => {
+    // reveal.js's rules for its own progress bar match them too
+    const widgets = new WidgetState();
+    const progress = (name: string, state: Record<string, unknown>) =>
+      widgets.control(
+        name,
+        { ...state, _view_name: 'ProgressView' },
+        'ProgressStyle'
+      );
+    const across = progress('IntProgress', { value: 6, max: 10 });
+    const upright = progress('FloatProgress', {
+      value: 0.5,
+      max: 1,
+      orientation: 'vertical'
+    });
+    web.file(
+      `${BASE}/progress.ipynb`,
+      notebook(
+        [
+          slide('slide', markdown('# Progress')),
+          code('across', [widgetView(across, 'IntProgress(value=6)')]),
+          code('upright', [widgetView(upright, 'FloatProgress(value=0.5)')])
+        ],
+        { ...PYTHON, ...widgets.metadata() }
+      )
+    );
+    await page.goto('/format/slides/urls/nb.example/progress.ipynb');
+    for (const [orientation, size, filled] of [
+      ['h', 'width', 0.6],
+      ['v', 'height', 0.5]
+    ] as const) {
+      const track = page.locator(`.widget-${orientation}progress > .progress`);
+      const bar = track.locator('.progress-bar');
+      await expect(bar).toBeVisible();
+      // JupyterLab's colors, and the bar fills its share of the track
+      await expect(track).toHaveCSS('background-color', 'rgb(238, 238, 238)');
+      const trackBox = (await track.boundingBox())!;
+      const barBox = (await bar.boundingBox())!;
+      expect(trackBox.width).toBeGreaterThan(10);
+      expect(trackBox.height).toBeGreaterThan(10);
+      expect(barBox[size] / trackBox[size]).toBeCloseTo(filled, 2);
+    }
+  });
 });
 
 test.describe('format URLs', () => {
