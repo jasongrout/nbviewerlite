@@ -52,14 +52,15 @@ export function keepsFormat(path: string): boolean {
 export interface IFormatLink {
   /** Viewer path. */
   path: string;
-  title: string;
+  /** The format's name, e.g. 'Slides', for "View as Slides". */
+  name: string;
   icon: IconName;
 }
 
 /**
- * "View as ..." links to the formats this notebook can be shown in, other
- * than the current one, in nbviewer's order (its notebook.html). `base` is
- * the viewer path without a format prefix.
+ * "View as" links to the formats this notebook can be shown in, other than
+ * the current one, in nbviewer's order (its notebook.html). `base` is the
+ * viewer path without a format prefix.
  */
 export function formatLinks(
   nb: nbformat.INotebookContent,
@@ -70,7 +71,7 @@ export function formatLinks(
     format => format !== current && (format !== 'slides' || hasSlides(nb))
   ).map(format => ({
     path: format === 'html' ? base : `format/${format}/${base}`,
-    title: `View as ${LABELS[format][0]}`,
+    name: LABELS[format][0],
     icon: LABELS[format][1]
   }));
 }

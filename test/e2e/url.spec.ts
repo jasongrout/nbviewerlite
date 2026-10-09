@@ -12,6 +12,7 @@ import {
   links,
   markdown,
   notebook,
+  openInMenu,
   PNG,
   startingWith,
   test
@@ -35,20 +36,21 @@ test('a notebook over http (url/)', async ({ page, web }) => {
   // the kernel is a label, not a link
   await expect(headerLinks(page)).toContainText('Python 3 (ipykernel) Kernel');
   // among others (other formats of the notebook, say)
+  await openInMenu(page);
   expect(await links(headerLinks(page))).toEqual(
     expect.arrayContaining([
       [
-        'View on nbviewer.org',
+        'nbviewer.org',
         'https://nbviewer.org/url/nb.example/notebooks/xkcd.ipynb'
       ],
       ['Download Notebook', 'http://nb.example/notebooks/xkcd.ipynb'],
       // JupyterLite downloads the notebook from the same URL
       [
-        'Open in JupyterLab',
+        'JupyterLab',
         'https://jupyter.org/try-jupyter/lab/index.html?fromURL=http%3A%2F%2Fnb.example%2Fnotebooks%2Fxkcd.ipynb'
       ],
       [
-        'Open in Jupyter Notebook',
+        'Jupyter Notebook',
         'https://jupyter.org/try-jupyter/notebooks/index.html?fromURL=http%3A%2F%2Fnb.example%2Fnotebooks%2Fxkcd.ipynb'
       ]
     ])

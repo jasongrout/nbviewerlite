@@ -12,6 +12,7 @@ import {
   type GitHub,
   headerLinks,
   links,
+  openInMenu,
   PNG,
   test,
   textColor,
@@ -81,8 +82,9 @@ test('an nbformat 3 notebook from GitHub', async ({ page, github }) => {
   // shown as it is, without JupyterLab's "converted" dialog or an error
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('alert')).toHaveCount(0);
+  await openInMenu(page);
   expect(await links(headerLinks(page))).toContainEqual([
-    'View as Code',
+    'Code',
     `/format/script/${HEAT_EQUATION}`
   ]);
 });

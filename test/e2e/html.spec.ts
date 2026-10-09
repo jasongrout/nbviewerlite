@@ -17,6 +17,7 @@ import {
   links,
   markdown,
   notebook,
+  openInMenu,
   PNG,
   test,
   type Web
@@ -201,12 +202,10 @@ test.describe('an HTML file in a repository', () => {
     const sandbox = ((await element.getAttribute('sandbox')) ?? '').split(' ');
     expect(sandbox).toContain('allow-scripts');
     expect(sandbox).not.toContain('allow-same-origin');
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      [
-        'View on GitHub',
-        'https://github.com/fx/demo/blob/main/docs/report.html'
-      ],
-      ['View on nbviewer.org', `https://nbviewer.org${VIEW}`],
+      ['GitHub', 'https://github.com/fx/demo/blob/main/docs/report.html'],
+      ['nbviewer.org', `https://nbviewer.org${VIEW}`],
       ['Download HTML', `${RAW}/docs/report.html`]
     ]);
     expect(
@@ -490,9 +489,10 @@ test.describe('an HTML file in a gist', () => {
     expect(await element.getAttribute('sandbox')).not.toContain(
       'allow-same-origin'
     );
+    await openInMenu(page);
     expect(await links(headerLinks(page))).toEqual([
-      ['View on Gist', `https://gist.github.com/${ID}`],
-      ['View on nbviewer.org', `https://nbviewer.org/gist/fx/${ID}/page.html`],
+      ['Gist', `https://gist.github.com/${ID}`],
+      ['nbviewer.org', `https://nbviewer.org/gist/fx/${ID}/page.html`],
       ['Download HTML', files['page.html'].raw_url]
     ]);
 

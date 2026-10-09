@@ -628,15 +628,27 @@ export function headerLinks(page: Page): Locator {
 }
 
 /**
- * The header's links to the notebook at `url` in JupyterLite (Try Jupyter's
- * JupyterLab and Notebook apps).
+ * Open the header's "Open in…" menu, whose links then count among
+ * headerLinks(page)'s, between the kernel and the download links. Returns
+ * the menu.
+ */
+export async function openInMenu(page: Page): Promise<Locator> {
+  await headerLinks(page).getByRole('button', { name: 'Open in…' }).click();
+  const menu = headerLinks(page).locator('.nbv-open-menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+/**
+ * The "Open in…" menu's links to the notebook at `url` in JupyterLite (Try
+ * Jupyter's JupyterLab and Notebook apps).
  */
 export function jupyterliteLinks(url: string): [string, string][] {
   const query = new URLSearchParams({ fromURL: url });
   const site = 'https://jupyter.org/try-jupyter';
   return [
-    ['Open in JupyterLab', `${site}/lab/index.html?${query}`],
-    ['Open in Jupyter Notebook', `${site}/notebooks/index.html?${query}`]
+    ['JupyterLab', `${site}/lab/index.html?${query}`],
+    ['Jupyter Notebook', `${site}/notebooks/index.html?${query}`]
   ];
 }
 

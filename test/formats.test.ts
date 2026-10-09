@@ -29,33 +29,33 @@ test('"View as" links go to the other formats, in nbviewer\'s order', () => {
   const base = 'github/u/r/blob/main/a.ipynb';
   const plain = notebook({});
   const slides = notebook(slide('slide'));
-  const titles = (links: { title: string }[]) => links.map(l => l.title);
+  const names = (links: { name: string }[]) => links.map(l => l.name);
 
   assert.deepEqual(formatLinks(slides, 'html', base), [
     {
       path: 'format/slides/github/u/r/blob/main/a.ipynb',
-      title: 'View as Slides',
+      name: 'Slides',
       icon: 'run'
     },
     {
       path: 'format/script/github/u/r/blob/main/a.ipynb',
-      title: 'View as Code',
+      name: 'Code',
       icon: 'code'
     }
   ]);
-  assert.deepEqual(titles(formatLinks(plain, 'html', base)), ['View as Code']);
+  assert.deepEqual(names(formatLinks(plain, 'html', base)), ['Code']);
   assert.deepEqual(formatLinks(slides, 'script', base), [
-    { path: base, title: 'View as Notebook', icon: 'notebook' },
+    { path: base, name: 'Notebook', icon: 'notebook' },
     {
       path: 'format/slides/github/u/r/blob/main/a.ipynb',
-      title: 'View as Slides',
+      name: 'Slides',
       icon: 'run'
     }
   ]);
   // slides of a notebook without slide metadata, as nbviewer still makes
-  assert.deepEqual(titles(formatLinks(plain, 'slides', base)), [
-    'View as Notebook',
-    'View as Code'
+  assert.deepEqual(names(formatLinks(plain, 'slides', base)), [
+    'Notebook',
+    'Code'
   ]);
 });
 

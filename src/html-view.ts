@@ -21,7 +21,7 @@ import {
   ResourceLoader
 } from './html.ts';
 import type { ILink } from './listing.ts';
-import { addHeaderLink, h, link, showStatus } from './page.ts';
+import { addHeaderLink, addMenuLink, h, link, showStatus } from './page.ts';
 
 export interface IHtmlSource {
   /** The file's raw URL; relative URLs in it resolve against this. */
@@ -81,7 +81,7 @@ export async function showHtml(
   }
 
   const [providerUrl, providerName] = source.provider;
-  addHeaderLink(providerUrl, `View on ${providerName}`, 'launch');
+  addMenuLink('View on', providerUrl, providerName, 'launch');
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download HTML', 'download');
 

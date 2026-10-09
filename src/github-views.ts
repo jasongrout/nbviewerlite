@@ -35,7 +35,7 @@ import {
   table
 } from './listing.ts';
 import { showNotebook } from './notebook-view.ts';
-import { addHeaderLink, h, showStatus } from './page.ts';
+import { addMenuLink, h, showStatus } from './page.ts';
 import { encodePath, githubPath } from './route.ts';
 
 interface IRepoPath {
@@ -79,10 +79,10 @@ function addCommonLinks(
   githubUrl: string,
   executorUrl: string | null
 ) {
-  addHeaderLink(githubUrl, 'View on GitHub', 'launch');
   if (executorUrl) {
-    addHeaderLink(executorUrl, 'Execute on Binder', 'launch');
+    addMenuLink('Run in', executorUrl, 'Binder', 'launch', 'Execute on Binder');
   }
+  addMenuLink('View on', githubUrl, 'GitHub', 'launch');
   addNbviewerLink(ctx);
 }
 
@@ -300,9 +300,10 @@ export async function showGithubUser(
     ]);
     return;
   }
-  addHeaderLink(
+  addMenuLink(
+    'View on',
     GITHUB_URL + encodeURIComponent(user),
-    'View on GitHub',
+    'GitHub',
     'launch'
   );
   addNbviewerLink(ctx);

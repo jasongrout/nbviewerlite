@@ -4,7 +4,7 @@
  */
 
 import { icon, type IconName } from './icons.ts';
-import { h } from './page.ts';
+import { dropdown, h } from './page.ts';
 
 export interface ILink {
   url: string;
@@ -87,55 +87,29 @@ export function refMenu(
   current: string,
   load: () => Promise<{ branches: ILink[]; tags: ILink[] }>
 ): HTMLElement {
-  const toggle = h(
-    'button',
-    {
-      type: 'button',
-      class: 'nbv-refmenu-toggle',
-      'aria-haspopup': 'true',
-      'aria-expanded': 'false'
-    },
-    current,
-    icon('caretDown')
-  );
   const content = h('div', { class: 'nbv-refmenu-content' }, 'Loading…');
-  const menu = h('div', { class: 'nbv-refmenu-popup', hidden: '' }, content);
-  const container = h('div', { class: 'nbv-refmenu' }, toggle, menu);
-
   let loaded = false;
-  const setOpen = (open: boolean) => {
-    menu.hidden = !open;
-    toggle.setAttribute('aria-expanded', String(open));
-  };
-  toggle.addEventListener('click', () => {
-    setOpen(menu.hidden);
-    if (loaded) {
-      return;
-    }
-    loaded = true;
-    load().then(
-      ({ branches, tags }) =>
-        content.replaceChildren(
-          refList('Branches', branches),
-          refList('Tags', tags)
-        ),
-      (err: Error) => {
-        loaded = false;
-        content.replaceChildren(err.message);
+  return dropdown(
+    [current],
+    h('div', { class: 'nbv-refmenu-popup' }, content),
+    () => {
+      if (loaded) {
+        return;
       }
-    );
-  });
-  document.addEventListener('click', event => {
-    if (!container.contains(event.target as Node)) {
-      setOpen(false);
+      loaded = true;
+      load().then(
+        ({ branches, tags }) =>
+          content.replaceChildren(
+            refList('Branches', branches),
+            refList('Tags', tags)
+          ),
+        (err: Error) => {
+          loaded = false;
+          content.replaceChildren(err.message);
+        }
+      );
     }
-  });
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
-      setOpen(false);
-    }
-  });
-  return container;
+  );
 }
 
 function refList(label: string, refs: ILink[]): HTMLElement {
