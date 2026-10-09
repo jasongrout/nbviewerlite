@@ -18,6 +18,19 @@ const jupyterLogo = fs.readFileSync(
   'utf8'
 );
 
+// html-manager renders ipywidgets 7 with its aliased packages base7 (base
+// 4.1.7) and controls7. npm can't satisfy controls7's own dependency on
+// '@jupyter-widgets/base@^4' with base7, so it nests another base 4.1.7 (with
+// its own Backbone) under controls7.
+const htmlManager = path.dirname(
+  require.resolve('@jupyter-widgets/html-manager/package.json')
+);
+const base7 = path.dirname(
+  require.resolve('@jupyter-widgets/base7/package.json', {
+    paths: [htmlManager]
+  })
+);
+
 module.exports = (env, argv) => ({
   entry: './src/index.ts',
   // Handle AMD/UMD wrappers inside the bundle. Otherwise they call the page's
@@ -46,6 +59,13 @@ module.exports = (env, argv) => ({
         loader: 'builtin:swc-loader',
         options: { jsc: { parser: { syntax: 'typescript' } } },
         type: 'javascript/auto'
+      },
+      {
+        // One base 4.1.7: controls7's views then extend the classes that
+        // html-manager hands out for ipywidgets 7 models, and the widgets
+        // chunk carries one copy of each.
+        issuer: /[\\/]@jupyter-widgets[\\/]controls7[\\/]/,
+        resolve: { alias: { '@jupyter-widgets/base$': base7 } }
       },
       {
         test: /\.css$/,
