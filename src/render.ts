@@ -1,3 +1,4 @@
+import { EditorView } from '@codemirror/view';
 import { Sanitizer } from '@jupyterlab/apputils';
 import { MarkdownCell } from '@jupyterlab/cells';
 import {
@@ -92,6 +93,17 @@ function createEditorServices() {
         ybinding({ ytext: sharedModel.ysource })
       );
     }
+  });
+  // Read-only editors are still contenteditable, so a click in code would
+  // put the focus there and keys would move a caret instead of scrolling the
+  // page or changing slides. Code is static text on nbviewer.org; here it
+  // stays selectable, but can't take the focus.
+  extensions.addExtension({
+    name: 'not-editable',
+    factory: () =>
+      EditorExtensionRegistry.createImmutableExtension(
+        EditorView.editable.of(false)
+      )
   });
 
   const factory = new CodeMirrorEditorFactory({ extensions, languages });

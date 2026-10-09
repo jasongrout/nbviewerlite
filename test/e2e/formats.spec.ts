@@ -343,13 +343,8 @@ test.describe('format/slides/', () => {
   test('the keys still change slides after a click in a code cell', async ({
     page
   }) => {
-    // Product bug: a click in a code cell puts the focus in its read-only
-    // CodeMirror editor, which is still contenteditable, and reveal.js
-    // ignores keys typed into editable elements. The arrow keys and Space
-    // then stop changing slides until the presenter clicks somewhere else.
-    // On nbviewer.org (nbconvert's slides) code is static HTML, so the keys
-    // always work.
-    test.fail();
+    // reveal.js ignores keys typed into editable elements, and JupyterLab's
+    // read-only editors are still contenteditable unless made otherwise.
     await page.goto('/format/slides/urls/nb.example/deck.ipynb#/1');
     await expect(slideNumber(page)).toHaveText('3 / 3');
     await page.getByText('print("printed")', { exact: true }).click();
