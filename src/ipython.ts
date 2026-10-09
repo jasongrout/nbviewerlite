@@ -5,8 +5,9 @@
  * shell escapes and help syntax become get_ipython() calls.
  *
  * Special syntax is only recognized where Python's tokenizer sees it, not in
- * strings or comments. Like IPython, this finds the first piece of special
- * syntax, replaces it, and tokenizes again.
+ * strings or comments, and IPython's output depends on Python's version: this
+ * follows Python 3.14, which nbviewer.org runs. Like IPython, this finds the
+ * first piece of special syntax, replaces it, and tokenizes again.
  */
 
 // Python's whitespace (str.isspace, \s), which JavaScript's \s doesn't match
@@ -228,13 +229,20 @@ function cellMagic(lines: string[]): string[] {
   ];
 }
 
-// Tokenizing, as far as the token transforms need it
+// Tokenizing, as far as the token transforms need it: a port of the C
+// tokenizer behind Python 3.14's tokenize module (Parser/lexer/lexer.c),
+// which nbviewer.org runs. F-strings and t-strings tokenize as PEP 701 and
+// PEP 750 have them: replacement fields hold expressions, which can contain
+// strings with any quotes, comments and line breaks.
 
 interface IToken {
   type:
     | 'NAME'
     | 'NUMBER'
     | 'STRING'
+    | 'FSTRING_START' // or TSTRING_START, and so on: the transforms don't care
+    | 'FSTRING_MIDDLE'
+    | 'FSTRING_END'
     | 'OP'
     | 'COMMENT'
     | 'NEWLINE'
@@ -246,164 +254,366 @@ interface IToken {
   col: number;
 }
 
+/** An f-string or t-string being tokenized (lexer.c's tokenizer_mode). */
+interface IFString {
+  /** The quotes that end it: ', ", ''' or """. */
+  quote: string;
+  raw: boolean;
+  /** In literal text or a format spec, rather than in an expression. */
+  literal: boolean;
+  formatSpec: boolean;
+  /** Brackets open in its replacement fields. */
+  depth: number;
+  /** The depth at which the innermost replacement field opened, or -1. */
+  field: number;
+}
+
 const NUMBER =
   /0[xX](?:_?[\da-fA-F])+|0[bB](?:_?[01])+|0[oO](?:_?[0-7])+|(?:\d(?:_?\d)*(?:\.(?:\d(?:_?\d)*)?)?|\.\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)?[jJ]?/y;
-// Python's tokenize module takes any non-ASCII character as part of a name.
-const NAME = /[a-zA-Z_\u0080-\uffff][\w\u0080-\uffff]*/y;
-const STRING_START = /(?:[rR][bBfF]?|[bBfF][rR]?|[uU])?('''|"""|'|")/y;
 const OPERATOR =
-  /\*\*=|\/\/=|>>=|<<=|\.\.\.|!=|%=|&=|\*\*|\*=|\+=|-=|->|\/\/|\/=|:=|<<|<=|==|>=|>>|@=|\^=|\|=|[^\s\w]/y;
-const LINE_END = /\r\n|\n|\r/y;
+  /\*\*=|\/\/=|>>=|<<=|\.\.\.|!=|%=|&=|\*\*|\*=|\+=|-=|->|\/\/|\/=|:=|<<|<=|<>|==|>=|>>|@=|\^=|\|=/y;
+// The string prefixes that go together (other mixes of the letters are errors)
+const PREFIX = /^(?:[bfrtu]|r[bft]|[bft]r)$/i;
+// How deep replacement fields can nest in format specs
+const MAX_FIELD_NESTING = 3;
 
 function matchAt(pattern: RegExp, s: string, pos: number): string | null {
   pattern.lastIndex = pos;
   return pattern.exec(s)?.[0] ?? null;
 }
 
+const isSpace = (c: string) => c === ' ' || c === '\t' || c === '\f';
+const isDigit = (c: string) => c >= '0' && c <= '9';
+// Python's tokenize module takes any non-ASCII character as part of a name.
+const isNameStart = (c: string) =>
+  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || c >= '\x80';
+
 /**
- * The end of a string literal that started before `pos`, or -1 if it goes
- * on past this line, or null if it's unterminated.
+ * The letters before a quote at `pos`, if they can be a string prefix: each
+ * of b, f, r, t and u at most once.
  */
-function stringEnd(line: string, pos: number, quote: string): number | null {
-  for (let i = pos; i < line.length; i++) {
-    if (line[i] === '\\') {
-      if (matchAt(LINE_END, line, i + 1) !== null) {
-        return -1; // a backslash continues the string on the next line
-      }
-      i++;
-    } else if (line.startsWith(quote, i)) {
-      return i + quote.length;
-    } else if (quote.length === 1 && matchAt(LINE_END, line, i) !== null) {
+function stringPrefix(text: string, pos: number): string | null {
+  let seen = '';
+  for (let j = pos; j < text.length && 'bBfFrRtTuU'.includes(text[j]); j++) {
+    const letter = text[j].toLowerCase();
+    if (seen.includes(letter)) {
       return null;
     }
+    seen += letter;
+    if (text[j + 1] === "'" || text[j + 1] === '"') {
+      return text.slice(pos, j + 1);
+    }
   }
-  return -1;
+  return null;
 }
 
 /**
- * Tokenize like Python's tokenize module, grouped into logical lines
- * (make_tokens_by_line). Like IPython, keep the tokens before an error.
- * INDENT and DEDENT tokens, which the transforms skip, are left out.
+ * Whether the tokenizer rejects a number, given the characters after it: a
+ * digit or underscore after its last digit (0b12, 1_), a base prefix without
+ * digits (0x), or an exponent sign without digits (1e+).
  */
-function tokensByLine(lines: string[]): IToken[][] {
+function badNumber(number: string, next: string): boolean {
+  return (
+    (/[\da-fA-F]$/.test(number) && /^[\d_]/.test(next)) ||
+    (number === '0' && /^[xXoObB]/.test(next)) ||
+    (!/[eEjJxXoObB]/.test(number) && /^[eE][+-](?!\d)/.test(next))
+  );
+}
+
+/**
+ * Tokenize like Python's tokenize module. Like IPython, keep the tokens before
+ * an error, and end them with an error token for the errors IPython expects;
+ * other errors just end tokenizing. INDENT, DEDENT and ENDMARKER tokens, which
+ * the transforms skip, are left out.
+ */
+function tokenize(lines: string[]): IToken[] {
+  // The tokenizer reads line by line, adding a missing line break
+  const starts: number[] = [];
+  let text = '';
+  for (const line of lines) {
+    starts.push(text.length);
+    text += line.endsWith('\n') ? line : line + '\n';
+  }
   const tokens: IToken[] = [];
-  let parenlev = 0;
-  let continued = false;
-  let open: IToken | null = null; // a string that spans lines
-  let quote = '';
-  // IPython marks where most tokenize errors stopped it with an error token
-  let failed = false;
+  const fstrings: IFString[] = [];
+  // (reading past the end of an array is slow)
+  const innermost = () =>
+    fstrings.length ? fstrings[fstrings.length - 1] : undefined;
+  let i = 0;
+  let level = 0; // open brackets
+  let lineStart = true;
+  let commentLine = false; // a comment alone on its line
+  let errorToken = false;
 
-  scan: for (let row = 0; row < lines.length; row++) {
-    const line = lines[row];
-    let pos = 0;
-    if (open) {
-      const end = stringEnd(line, 0, quote);
-      if (end === null) {
-        failed = true;
-        break;
-      } else if (end === -1) {
-        continue;
-      }
-      tokens.push(open);
-      open = null;
-      pos = end;
-    } else if (parenlev === 0 && !continued) {
-      // a new statement: blank and comment-only lines have no NEWLINE
-      pos = /^[ \t\f]*/.exec(line)?.[0].length ?? 0;
-      if (
-        line[pos] === '#' ||
-        pos === line.length ||
-        matchAt(LINE_END, line, pos)
-      ) {
-        if (line[pos] === '#') {
-          const comment = /^#[^\r\n]*/.exec(line.slice(pos))?.[0] ?? '#';
-          tokens.push({ type: 'COMMENT', string: comment, row, col: pos });
-          pos += comment.length;
-        }
-        tokens.push({ type: 'NL', string: line.slice(pos), row, col: pos });
-        continue;
-      }
-    } else {
-      continued = false;
+  let row = 0;
+  const token = (
+    type: IToken['type'],
+    start: number,
+    end: number,
+    next = end
+  ) => {
+    while (row + 1 < starts.length && starts[row + 1] <= start) {
+      row++;
     }
+    const string = text.slice(start, end);
+    tokens.push({ type, string, row, col: start - starts[row] });
+    i = next;
+    return true;
+  };
+  const stop = (expected: boolean) => {
+    errorToken = expected;
+    return false;
+  };
 
-    while (pos < line.length) {
-      const ch = line[pos];
-      if (ch === ' ' || ch === '\t' || ch === '\f') {
-        pos++;
-        continue;
+  /** Skip a backslash and the line break after it, unless the input ends. */
+  function continueLine(): boolean {
+    const length = text.startsWith('\\\r\n', i)
+      ? 3
+      : text.startsWith('\\\n', i)
+        ? 2
+        : 0;
+    if (!length || i + length >= text.length) {
+      return false;
+    }
+    i += length;
+    return true;
+  }
+
+  /** A string literal after a prefix of `skip` letters. */
+  function string(skip: number): boolean {
+    const start = i;
+    let j = start + skip;
+    const q = text[j];
+    const quote = text.startsWith(q + q + q, j) ? q + q + q : q;
+    j += quote.length;
+    for (let quotes = 0; quotes < quote.length; ) {
+      if (j >= text.length || (quote.length === 1 && text[j] === '\n')) {
+        // IPython expects "unterminated string literal", but not "EOF in
+        // multi-line string", or "f-string: expecting '}'" for the quotes of
+        // the f-string whose replacement field this is in
+        return stop(quote.length === 1 && innermost()?.quote !== quote);
       }
-      const token = (type: IToken['type'], string: string) => {
-        tokens.push({ type, string, row, col: pos });
-        pos += string.length;
-      };
-      const ending = matchAt(LINE_END, line, pos);
-      if (ending !== null) {
-        token(parenlev > 0 ? 'NL' : 'NEWLINE', ending);
-        continue scan;
-      }
-      if (ch === '#') {
-        token('COMMENT', /^#[^\r\n]*/.exec(line.slice(pos))?.[0] ?? '#');
-        continue;
-      }
-      if (ch === '\\') {
-        if (matchAt(LINE_END, line, pos + 1) === null) {
-          failed = true; // "unexpected character after line continuation"
-          break scan;
+      const c = text[j++];
+      if (c === q) {
+        quotes++;
+      } else {
+        quotes = 0;
+        if (c === '\\') {
+          j += text.startsWith('\r\n', j) ? 2 : 1;
         }
-        continued = true;
-        continue scan;
       }
-      const start = matchAt(STRING_START, line, pos);
-      if (start !== null) {
-        quote = start.slice(/['"]/.exec(start)?.index);
-        const end = stringEnd(line, pos + start.length, quote);
-        if (end === null) {
-          failed = true; // unterminated string literal
-          break scan;
-        } else if (end === -1) {
-          open = { type: 'STRING', string: '', row, col: pos };
-          continue scan;
+    }
+    return token('STRING', start, j);
+  }
+
+  function startFString(prefix: string): boolean {
+    const start = i;
+    const j = start + prefix.length;
+    const q = text[j];
+    const quote = text.startsWith(q + q + q, j) ? q + q + q : q;
+    fstrings.push({
+      quote,
+      raw: /r/i.test(prefix),
+      literal: true,
+      formatSpec: false,
+      depth: 0,
+      field: -1
+    });
+    return token('FSTRING_START', start, j + quote.length);
+  }
+
+  /** The next token outside f-strings' literal text (tok_get_normal_mode). */
+  function normal(): boolean {
+    // the f-string whose replacement field this is in
+    const fstring = innermost();
+    let blankLine = false;
+    if (lineStart) {
+      lineStart = false;
+      for (;;) {
+        if (isSpace(text[i])) {
+          i++;
+        } else if (text[i] !== '\\') {
+          break;
+        } else if (!continueLine()) {
+          return stop(true);
         }
-        token('STRING', line.slice(pos, end));
-        continue;
       }
-      const number = matchAt(NUMBER, line, pos);
+      blankLine = text[i] === '#' || text[i] === '\n' || text[i] === '\r';
+    }
+    for (;;) {
+      while (isSpace(text[i])) {
+        i++;
+      }
+      const start = i;
+      const c = text[i];
+      if (c === '#') {
+        while (i < text.length && text[i] !== '\n' && text[i] !== '\r') {
+          i++;
+        }
+        commentLine = blankLine;
+        return token('COMMENT', start, i);
+      }
+      if (i >= text.length) {
+        // "unexpected EOF in multi-line statement"
+        return level > 0 ? stop(true) : false;
+      }
+      if (isNameStart(c)) {
+        const prefix = stringPrefix(text, i);
+        if (prefix === null) {
+          let end = i + 1;
+          while (isNameStart(text[end]) || isDigit(text[end])) {
+            end++;
+          }
+          return token('NAME', start, end);
+        } else if (!PREFIX.test(prefix)) {
+          return stop(false); // "'u' and 'b' prefixes are incompatible"
+        }
+        return /[ft]/i.test(prefix)
+          ? startFString(prefix)
+          : string(prefix.length);
+      }
+      if (c === '\n' || c === '\r') {
+        // a line break inside brackets, or ending a blank or comment line
+        const nl = blankLine || level > 0 || commentLine;
+        lineStart = true;
+        commentLine = false;
+        return token(nl ? 'NL' : 'NEWLINE', start, i + (c === '\r' ? 2 : 1));
+      }
+      const number =
+        isDigit(c) || (c === '.' && isDigit(text[i + 1]))
+          ? matchAt(NUMBER, text, i)
+          : null;
       if (number !== null) {
-        const next = line.slice(pos + number.length);
-        if (/^[\d_]/.test(next) || (number === '0' && /^[xXbBoO]/.test(next))) {
-          failed = true; // a malformed literal such as 0b12, 1_ or 0x
-          break scan;
+        const end = i + number.length;
+        if (badNumber(number, text.slice(end, end + 3))) {
+          return stop(true); // "invalid decimal literal" and the like
         }
-        token('NUMBER', number);
+        return token('NUMBER', start, end);
+      }
+      if (c === '"' || c === "'") {
+        return string(0);
+      }
+      if (c === '\\') {
+        // "unexpected character after line continuation character"
+        if (!continueLine()) {
+          return stop(true);
+        }
         continue;
       }
-      const name = matchAt(NAME, line, pos);
-      if (name !== null) {
-        token('NAME', name);
-        continue;
+      if (
+        c === ':' &&
+        fstring &&
+        fstring.field >= 0 &&
+        fstring.depth - 1 === fstring.field
+      ) {
+        // a format spec
+        fstring.literal = fstring.formatSpec = true;
+        return token('OP', start, i + 1);
       }
-      const op = matchAt(OPERATOR, line, pos) ?? ch;
+      const op =
+        ('!%&*+-./:<=>@^|'.includes(c) && matchAt(OPERATOR, text, i)) || c;
       if ('([{'.includes(op)) {
-        parenlev++;
+        level++;
+        if (fstring) {
+          fstring.depth++;
+        }
       } else if (')]}'.includes(op)) {
-        parenlev = Math.max(0, parenlev - 1);
+        if (fstring && !fstring.depth && op === '}') {
+          return stop(false); // "f-string: single '}' is not allowed"
+        }
+        level = Math.max(0, level - 1);
+        if (fstring) {
+          if (--fstring.depth < 0) {
+            return stop(false); // "f-string: unmatched ')'"
+          }
+          if (op === '}' && fstring.depth === fstring.field) {
+            // the end of the replacement field
+            fstring.field--;
+            fstring.literal = true;
+            fstring.formatSpec = false;
+          }
+        }
+      } else if (c < ' ' || c === '\x7f') {
+        return stop(true); // "invalid non-printable character"
       }
-      token('OP', op);
-    }
-    // the last line, without a line ending
-    if (!open && !continued) {
-      tokens.push({
-        type: parenlev > 0 ? 'NL' : 'NEWLINE',
-        string: '',
-        row,
-        col: pos
-      });
+      return token('OP', start, i + op.length);
     }
   }
 
-  if (failed || (open ? quote.length === 1 : parenlev > 0 || continued)) {
+  /** The next token in an f-string's literal text (tok_get_fstring_mode). */
+  function literal(fstring: IFString): boolean {
+    const start = i;
+    /** Enter a replacement field, unless they nest too deeply. */
+    const field = () => {
+      fstring.literal = fstring.formatSpec = false;
+      return ++fstring.field < MAX_FIELD_NESTING;
+    };
+    if (text[i] === '{' && text[i + 1] !== '{') {
+      return field() ? normal() : stop(false);
+    }
+    if (text.startsWith(fstring.quote, i)) {
+      fstrings.pop();
+      return token('FSTRING_END', start, i + fstring.quote.length);
+    }
+    // FSTRING_MIDDLE, up to a replacement field, the end or an escaped brace
+    const middle = (end: number, next = end) =>
+      token('FSTRING_MIDDLE', start, end, next);
+    const q = fstring.quote[0];
+    let unicodeEscape = false;
+    let j = i;
+    for (let quotes = 0; quotes < fstring.quote.length; ) {
+      if (
+        j >= text.length ||
+        (fstring.quote.length === 1 && text[j] === '\n')
+      ) {
+        // "unterminated f-string literal", or a line break in a format spec:
+        // "f-string: newlines are not allowed in format specifiers..."
+        return stop(false);
+      }
+      const formatSpec = fstring.formatSpec && fstring.field >= 0;
+      const c = text[j++];
+      if (c === q) {
+        quotes++;
+        continue;
+      }
+      quotes = 0;
+      if (c === '{') {
+        if (text[j] === '{' && !formatSpec) {
+          return middle(j, j + 1); // {{ ends the token after one brace
+        }
+        return field() ? middle(j - 1) : stop(false);
+      } else if (c === '}') {
+        if (unicodeEscape) {
+          return middle(j); // the end of a \N{...} escape
+        } else if (text[j] === '}' && !formatSpec && !fstring.depth) {
+          return middle(j, j + 1);
+        }
+        fstring.literal = fstring.formatSpec = false;
+        return middle(j - 1);
+      } else if (c === '\\') {
+        if (text[j] === '\r') {
+          j++;
+        }
+        const escaped = text[j];
+        if (escaped !== '{' && escaped !== '}' && j < text.length) {
+          j++;
+          if (escaped === 'N' && !fstring.raw && text[j] === '{') {
+            unicodeEscape = true;
+            j++;
+          }
+        }
+      }
+    }
+    return middle(j - fstring.quote.length);
+  }
+
+  for (;;) {
+    const fstring = innermost();
+    if (!(fstring?.literal ? literal(fstring) : normal())) {
+      break;
+    }
+  }
+  if (errorToken) {
     const last = tokens[tokens.length - 1];
     tokens.push({
       type: 'ERRORTOKEN',
@@ -412,17 +622,26 @@ function tokensByLine(lines: string[]): IToken[][] {
       col: last?.col ?? 0
     });
   }
+  return tokens;
+}
 
+/**
+ * Group tokens into logical lines, as IPython's make_tokens_by_line does. It
+ * counts brackets by their text, also in FSTRING_MIDDLE tokens, such as the
+ * "(" of f"({x}", where Python's tokenizer doesn't.
+ */
+function tokensByLine(lines: string[]): IToken[][] {
   const groups: IToken[][] = [[]];
   let level = 0;
-  for (const token of tokens) {
+  for (const token of tokenize(lines)) {
     groups[groups.length - 1].push(token);
+    const s = token.string;
     if (token.type === 'NEWLINE' || (token.type === 'NL' && level <= 0)) {
       groups.push([]);
-    } else if (token.type === 'OP' && '([{'.includes(token.string)) {
+    } else if (s === '(' || s === '[' || s === '{') {
       level++;
-    } else if (token.type === 'OP' && ')]}'.includes(token.string)) {
-      level = Math.max(0, level - 1);
+    } else if ((s === ')' || s === ']' || s === '}') && level > 0) {
+      level--;
     }
   }
   if (!groups[groups.length - 1].length) {

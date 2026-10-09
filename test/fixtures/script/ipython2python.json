@@ -378,5 +378,137 @@
  [
   "  a\n 　 \n   b\n",
   "a\n\n b\n"
+ ],
+ [
+  "x = f\"{\n1}\"\n!ls",
+  "x = f\"{\n1}\"\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f\"{x # c\n}\"\n!ls",
+  "x = f\"{x # c\n}\"\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f\"{1}\"\n!ls",
+  "x = f\"{1}\"\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f\"\"\"{\n1}\"\"\"\n!ls",
+  "x = f\"\"\"{\n1}\"\"\"\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f\"{\"a\"}\"\n!ls",
+  "x = f\"{\"a\"}\"\nget_ipython().system('ls')\n"
+ ],
+ [
+  "msg = f\"{\", \".join(f\"{k}={v!r}\" for k, v in d.items())}\"\n!echo done",
+  "msg = f\"{\", \".join(f\"{k}={v!r}\" for k, v in d.items())}\"\nget_ipython().system('echo done')\n"
+ ],
+ [
+  "x = f'{f'{x!r:>{w}}'}' + f'{x=}' + f'{x!=y}'\n%time x",
+  "x = f'{f'{x!r:>{w}}'}' + f'{x=}' + f'{x!=y}'\nget_ipython().run_line_magic('time', 'x')\n"
+ ],
+ [
+  "x = f'{x:{y:{z}}}'\n!ls",
+  "x = f'{x:{y:{z}}}'\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f'{x:{y:{z:{w}}}}'\n!ls",
+  "x = f'{x:{y:{z:{w}}}}'\n!ls\n"
+ ],
+ [
+  "x = f'{x:{{}}}' f'{x:a{{b}}'\n!ls",
+  "x = f'{x:{{}}}' f'{x:a{{b}}'\n!ls\n"
+ ],
+ [
+  "x = f'{\r\n1}'\r\n!ls\r\n",
+  "x = f'{\r\n1}'\r\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f'{{'\n# IPython counts the brace in the text\n!ls\n",
+  "x = f'{{'\n# IPython counts the brace in the text\n!ls\n"
+ ],
+ [
+  "print(f\"({x}\")\n\n!ls\n",
+  "print(f\"({x}\")\n\n!ls\n"
+ ],
+ [
+  "f\"{f')'\n!x}\"\n",
+  "f\"{f')'\nget_ipython().system('x}\"')\n"
+ ],
+ [
+  "f\"{x)\n!ls\n",
+  "f\"{x)\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f'abc\n!ls\n",
+  "x = f'abc\n!ls\n"
+ ],
+ [
+  "x = f'{a'\n!ls\n",
+  "x = f'{a'\n!ls\n"
+ ],
+ [
+  "x = f'{a:b\nc}'\n!ls\n",
+  "x = f'{a:b\nc}'\n!ls\n"
+ ],
+ [
+  "x = f'''{a:b\nc}'''\n!ls\n",
+  "x = f'''{a:b\nc}'''\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = f'{x}}'\n!ls\n",
+  "x = f'{x}}'\n!ls\n"
+ ],
+ [
+  "x = f'{x # }'\n!ls\n",
+  "x = f'{x # }'\n!ls\n"
+ ],
+ [
+  "x = f'\\N{BULLET} {x}' + rf'\\N{x}'\n%time x\n",
+  "x = f'\\N{BULLET} {x}' + rf'\\N{x}'\nget_ipython().run_line_magic('time', 'x')\n"
+ ],
+ [
+  "x = f'\\{x}'\n!ls\n",
+  "x = f'\\{x}'\nget_ipython().system('ls')\n"
+ ],
+ [
+  "t'{x}' ; %time\n",
+  "t'{x}' ; %time\n"
+ ],
+ [
+  "x = t'{\n1}'\n!ls",
+  "x = t'{\n1}'\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = rt'''{a}\n{\nb}''' + Tr'{c}'\n%time x",
+  "x = rt'''{a}\n{\nb}''' + Tr'{c}'\nget_ipython().run_line_magic('time', 'x')\n"
+ ],
+ [
+  "x = ub'a'\n!ls\n",
+  "x = ub'a'\n!ls\n"
+ ],
+ [
+  "x = ft'a'\n!ls\n",
+  "x = ft'a'\n!ls\n"
+ ],
+ [
+  "x = 1e+x\n!ls\n",
+  "x = 1e+x\n!ls\n"
+ ],
+ [
+  "x = 1j2\n!ls\n",
+  "x = 1j2\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = 1._\n!ls\n",
+  "x = 1._\nget_ipython().system('ls')\n"
+ ],
+ [
+  "x = 0b2\n!ls\n",
+  "x = 0b2\n!ls\n"
+ ],
+ [
+  "x = 1\u000b\n!ls\n",
+  "x = 1\u000b\n!ls\n"
  ]
 ]

@@ -5,15 +5,20 @@ import { test } from 'node:test';
 import { ipython2python, pyRepr, splitLines } from '../src/ipython.ts';
 
 // [input, output] pairs from IPython 9's TransformerManager().transform_cell
-const cases: [string, string][] = JSON.parse(
-  readFileSync(
-    new URL('fixtures/script/ipython2python.json', import.meta.url),
-    'utf8'
-  )
-);
+// on Python 3.14
+const readCases = (name: string): [string, string][] =>
+  JSON.parse(
+    readFileSync(new URL(`fixtures/script/${name}`, import.meta.url), 'utf8')
+  );
 
 test('ipython2python matches IPython', () => {
-  for (const [input, expected] of cases) {
+  for (const [input, expected] of readCases('ipython2python.json')) {
+    assert.equal(ipython2python(input), expected, JSON.stringify(input));
+  }
+});
+
+test('ipython2python matches IPython on random cells with f-strings', () => {
+  for (const [input, expected] of readCases('ipython2python-random.json')) {
     assert.equal(ipython2python(input), expected, JSON.stringify(input));
   }
 });

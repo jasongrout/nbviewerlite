@@ -5,6 +5,8 @@
   extension nbconvert picks;
 - script/ipython2python.json: [cell, output] pairs from IPython's
   TransformerManager, which nbconvert's ipython2python filter uses;
+- script/ipython2python-random.json: the same for random cells with
+  f-strings, t-strings and IPython syntax;
 - slides.json: cells' slideshow metadata and the slides that nbconvert's
   SlidesExporter makes of them, read back from its <section>s.
 
@@ -17,6 +19,7 @@ import json
 import os
 import random
 import sys
+import warnings
 
 import nbformat
 from bs4 import BeautifulSoup
@@ -25,6 +28,8 @@ from nbconvert.exporters import ScriptExporter, SlidesExporter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 v4 = nbformat.v4
+# the tokenizer warns about escapes such as \{ in the cells
+warnings.filterwarnings('ignore', category=SyntaxWarning)
 
 
 def notebook(out_dir, name, cells, language_info=None, kernelspec=None):
@@ -211,6 +216,41 @@ IPYTHON_CASES = [
     ">>> x = 1\r\n\r\n>>> %time x\r\n",
     "  a\n\u00a0\n  b",
     "  a\n \u3000 \n   b\n",
+    # f-strings and t-strings tokenize as PEP 701 and PEP 750 have them
+    'x = f"{\n1}"\n!ls',
+    'x = f"{x # c\n}"\n!ls',
+    'x = f"{1}"\n!ls',
+    'x = f"""{\n1}"""\n!ls',
+    'x = f"{"a"}"\n!ls',
+    'msg = f"{", ".join(f"{k}={v!r}" for k, v in d.items())}"\n!echo done',
+    "x = f'{f'{x!r:>{w}}'}' + f'{x=}' + f'{x!=y}'\n%time x",
+    "x = f'{x:{y:{z}}}'\n!ls",
+    "x = f'{x:{y:{z:{w}}}}'\n!ls",
+    "x = f'{x:{{}}}' f'{x:a{{b}}'\n!ls",
+    "x = f'{\r\n1}'\r\n!ls\r\n",
+    "x = f'{{'\n# IPython counts the brace in the text\n!ls\n",
+    'print(f"({x}")\n\n!ls\n',
+    "f\"{f')'\n!x}\"\n",
+    'f"{x)\n!ls\n',
+    "x = f'abc\n!ls\n",
+    "x = f'{a'\n!ls\n",
+    "x = f'{a:b\nc}'\n!ls\n",
+    "x = f'''{a:b\nc}'''\n!ls\n",
+    "x = f'{x}}'\n!ls\n",
+    "x = f'{x # }'\n!ls\n",
+    "x = f'\\N{BULLET} {x}' + rf'\\N{x}'\n%time x\n",
+    "x = f'\\{x}'\n!ls\n",
+    "t'{x}' ; %time\n",
+    "x = t'{\n1}'\n!ls",
+    "x = rt'''{a}\n{\nb}''' + Tr'{c}'\n%time x",
+    "x = ub'a'\n!ls\n",
+    "x = ft'a'\n!ls\n",
+    # numbers that Python's tokenizer rejects, or not
+    "x = 1e+x\n!ls\n",
+    "x = 1j2\n!ls\n",
+    "x = 1._\n!ls\n",
+    "x = 0b2\n!ls\n",
+    "x = 1\x0b\n!ls\n",
 ]
 
 
@@ -219,6 +259,81 @@ def write_ipython_cases(path):
     with open(path, 'w') as f:
         json.dump(pairs, f, indent=1, ensure_ascii=False)
         f.write('\n')
+
+
+STRING_TEXT = ['a', ' ', '{{', '}}', '(', ')', '[', '=', '%', '!', '?', '#', ':', '\\n',
+               '\\\n', '\\N{BULLET}', '\\{', "\\'", '"', "'", '\xe9']
+FIELD_EXPRESSIONS = ['x', 'a.b', '1', 'd["k"]', "d['k']", 'f(x, y=2)', '{1: 2}', '[1, 2][0]',
+                     '(lambda y: y)(1)', '(a := 1)', 'x != y', 'x # comment\n', '\nx\n',
+                     'x # }\n', '"""a\nb"""', '"{"', "'}'"]
+FORMAT_SPECS = ['>10', '.2f', 'd', '{{', '}}', '=', '!', '#x', '\\n']
+IPYTHON_LINES = ['!ls', '!!ls -l', '%time x', 'a = !ls', 'b = %time 1', 'foo?', '?foo',
+                 'x.y??', ',f a b', ';f a', '/f a', '', '# c', 'x = (']
+FUZZ = ['f', 't', 'r', 'b', 'u', "'", '"', "'''", '"""', '{', '}', '{{', '}}', ':', '!', '=',
+        '#', '\n', '\\', '(', ')', '%', '?', ' ', 'x', '1', '\\N{', '\r\n', '\t', '1e', '0x',
+        'f"', "rf'", "t'''"]
+
+
+def random_string(rng, depth=0):
+    """An f-string, t-string or other string, with random replacement fields."""
+    prefix = rng.choice(['f', 'F', 'rf', 'fR', 't', 'Rt', '', 'r', 'b'])
+    quote = rng.choice(["'", '"', "'''", '"""'])
+    text = ''
+    for _ in range(rng.randint(0, 4)):
+        if rng.random() < 0.6 or not set(prefix.lower()) & {'f', 't'}:
+            text += rng.choice(STRING_TEXT + ['\n'] * (len(quote) == 3))
+        else:
+            text += random_field(rng, depth)
+    return prefix + quote + text + quote
+
+
+def random_field(rng, depth, spec_depth=0):
+    if depth < 2 and rng.random() < 0.3:
+        field = '{' + random_string(rng, depth + 1)
+    else:
+        field = '{' + rng.choice(FIELD_EXPRESSIONS)
+    field += rng.choice(['', '', '=', '!r', '=!s'])
+    if rng.random() < 0.3:
+        field += ':'
+        for _ in range(rng.randint(0, 2)):
+            if spec_depth < 3 and rng.random() < 0.3:
+                field += random_field(rng, depth, spec_depth + 1)
+            else:
+                field += rng.choice(FORMAT_SPECS)
+    return field + '}'
+
+
+def random_cell(rng):
+    if rng.random() < 0.3:
+        # what matters to the tokenizer, mixed up
+        return (''.join(rng.choice(FUZZ) for _ in range(rng.randint(1, 20))) +
+                rng.choice(['\n!ls', '\n%time x', '\nfoo?', '\na = !ls']))
+    lines = []
+    for _ in range(rng.randint(1, 3)):
+        lines.append(rng.choice(['', 'x = ', 'print(', 'y = [', 'f(a, ']) + random_string(rng) +
+                     rng.choice(['', ')', ']', ' ; !ls', ' + ' + random_string(rng), '?']))
+        lines.append(rng.choice(IPYTHON_LINES))
+    cell = '\n'.join(lines)
+    if rng.random() < 0.3:
+        # cut, drop or add a character
+        k = rng.randrange(len(cell))
+        cell = rng.choice([cell[:k], cell[:k] + cell[k + 1:],
+                           cell[:k] + rng.choice('{}\'"\n#:\\') + cell[k:]])
+    return cell
+
+
+def write_random_ipython_cases(path, count=300):
+    """Random cells with f-strings, t-strings and IPython syntax."""
+    rng = random.Random(1)
+    pairs = []
+    while len(pairs) < count:
+        cell = random_cell(rng)
+        try:
+            pairs.append([cell, TransformerManager().transform_cell(cell)])
+        except Exception:
+            pass  # Python's tokenizer raises IndentationError and the like
+    with open(path, 'w') as f:
+        f.write('[\n' + ',\n'.join(json.dumps(p, ensure_ascii=False) for p in pairs) + '\n]\n')
 
 
 TYPES = ['-', 'slide', 'subslide', 'fragment', 'notes', 'skip']
@@ -297,4 +412,5 @@ if __name__ == '__main__':
         sys.exit('generate.py needs Python 3.14')
     write_script_fixtures(os.path.join(HERE, 'script'))
     write_ipython_cases(os.path.join(HERE, 'script', 'ipython2python.json'))
+    write_random_ipython_cases(os.path.join(HERE, 'script', 'ipython2python-random.json'))
     write_slides_cases(os.path.join(HERE, 'slides.json'))
