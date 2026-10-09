@@ -106,7 +106,7 @@ render with JupyterLab components
 | Markdown | `@jupyterlab/markedparser-extension` |
 | Math | `@jupyterlab/mathjax-extension` (MathJax 3 and its fonts) |
 | Code display | `@jupyterlab/codemirror` (read-only CodeMirror 6) |
-| Theme | `@jupyterlab/theme-light-extension` CSS variables |
+| Themes | `@jupyterlab/theme-light-extension` and `theme-dark-extension` CSS variables (the dark ones scoped to `:root[data-nbv-theme='dark']` at build time) |
 | Icons | `@jupyterlab/ui-components` SVG icons (folder, notebook, file, ...) |
 | JSON, PDF, Vega/Vega-Lite outputs | `@jupyterlab/json-extension`, `@jupyterlab/pdf-extension`, `@jupyterlab/vega5-extension` |
 | Mermaid (outputs and Markdown) | `@jupyterlab/mermaid` |
@@ -115,8 +115,9 @@ render with JupyterLab components
 | FAQ Markdown | `marked` (JupyterLab's Markdown parser) |
 
 The page shell (header, link bar, listings) is a small hand-written HTML/CSS
-layer in JupyterLab's visual language; nbviewer's Bootstrap 3 and LESS build
-are not carried over. jQuery and RequireJS stay on the page as globals,
+layer in JupyterLab's visual language, colored with its theme variables;
+nbviewer's Bootstrap 3 and LESS build are not carried over. jQuery and
+RequireJS stay on the page as globals,
 because classic-notebook outputs (older Plotly and Bokeh output, for example)
 expect them, as on nbviewer.org.
 
