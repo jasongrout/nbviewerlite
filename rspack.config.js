@@ -60,14 +60,21 @@ module.exports = (env, argv) => ({
     ]
   },
   plugins: [
-    new rspack.HtmlRspackPlugin({
-      template: './src/index.html',
-      favicon: './src/favicon.ico',
-      templateParameters: {
-        requirejsUrl: '/' + requirejsPath,
-        jupyterLogo
-      }
-    }),
+    // index.html for viewer URLs (public/_redirects), and the same app as
+    // 404.html for every other unknown path: it shows "not found", or
+    // redirects nbviewer's old bare gist-id URLs (/{id}) to /gist/{id}.
+    ...['index.html', '404.html'].map(
+      filename =>
+        new rspack.HtmlRspackPlugin({
+          filename,
+          template: './src/index.html',
+          favicon: './src/favicon.ico',
+          templateParameters: {
+            requirejsUrl: '/' + requirejsPath,
+            jupyterLogo
+          }
+        })
+    ),
     new rspack.CopyRspackPlugin({
       patterns: [
         { from: 'public' },
@@ -79,7 +86,7 @@ module.exports = (env, argv) => ({
   ],
   devServer: {
     port: 8080,
-    // index.html for every path that isn't a file, as on Cloudflare Pages
+    // the app for every path that isn't a file (close enough for development)
     historyApiFallback: { disableDotRule: true },
     static: false
   },

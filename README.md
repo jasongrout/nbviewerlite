@@ -41,12 +41,19 @@ The site runs on Cloudflare Pages. `npm run build` writes a static site to
 
 - files as themselves: content-hashed assets under `/static/`, `favicon.ico`,
   `robots.txt`;
-- `index.html`, with status 200, for every other path. This is Pages'
-  single-page-app mode, which is on because `dist/` has no top-level
-  `404.html`. Don't add one. The browser keeps the requested URL, which the
-  app reads;
+- viewer URLs (`/url/...`, `/urls/...`, `/github/...`, `/gist/...`) get the
+  app, with status 200, through the rewrites in `_redirects`
+  (`/github/*  /  200`, ...). The browser keeps the requested URL, which the
+  app reads. The rules point at `/` rather than `/index.html`, which Pages
+  rejects as an infinite loop;
+- every other unknown path gets `404.html`, a copy of the app, with status
+  404. It shows "not found", or redirects nbviewer's old bare gist-id URLs
+  (`/{id}`) to `/gist/{id}`;
 - missing `/static/` files get `static/404.html`, with status 404;
 - headers from `_headers`.
+
+New URL prefixes (e.g. `/format/` in phase 3) need a rule in
+`public/_redirects`.
 
 The site must be served from the root of its domain.
 
@@ -79,9 +86,10 @@ A local build can also be uploaded without the Git integration:
 
 ### Other hosts
 
-- **Netlify:** `netlify.toml` has the build settings and the rewrite rules.
-- Any host that answers unknown paths with `/index.html` and status 200,
-  e.g. nginx with `try_files $uri /index.html;`.
+- **Netlify:** reads the same `_redirects` file and `404.html`;
+  `netlify.toml` has the build settings.
+- Others need the same rewrites, or at least `index.html` (status 200) for
+  every path that isn't a file, e.g. nginx with `try_files $uri /index.html;`.
 
 ### Build settings
 

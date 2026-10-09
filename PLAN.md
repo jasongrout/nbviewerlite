@@ -36,10 +36,19 @@ deploy to production, other branches and pull requests get preview URLs.
 Pages serves `dist/`:
 
 - Files as themselves (`/static/...`, `/favicon.ico`).
-- `index.html` with status 200 for every other path: Pages' single-page-app
-  mode, on as long as the site has no top-level `404.html`. Status 200 makes
-  it a rewrite, not a redirect: the address bar and `location.pathname` keep
-  the original path, which the app then reads.
+- Viewer URLs get the app with status 200, through rewrites in `_redirects`:
+  `/url/*`, `/urls/*`, `/github/*` and `/gist/*` to `/`. Status 200 makes
+  them rewrites, not redirects: the address bar and `location.pathname` keep
+  the original path, which the app then reads. Pages applies rules "regardless
+  of whether or not an asset matches the incoming request"
+  ([docs](https://developers.cloudflare.com/pages/configuration/redirects/)),
+  which is fine because no files live under these prefixes; a catch-all `/*`
+  would also capture the assets (Pages rejects it as an infinite loop, as it
+  does any rule pointing at `/index.html`, hence `/`).
+- Every other unknown path gets `404.html`, which is the app too, with status
+  404: unknown URLs are real 404s, and nbviewer's old bare gist-id URLs
+  (`/{id}`, which no rule can match without also matching `/favicon.ico`)
+  still work, because the app redirects them to `/gist/{id}`.
 - Missing `/static/` files get `static/404.html` (status 404), not the app.
 - `_headers`: basic security headers. Hashed assets keep the default caching
   (revalidated with ETags): a year-long `immutable` header would also stick
@@ -48,23 +57,17 @@ Pages serves `dist/`:
   `.node-version` pins Node.js for the build.
 
 Locally, `npm run preview` (a small Node server) and `npx wrangler pages dev
-dist` (Cloudflare's emulator) serve the build the same way.
-
-There is no `_redirects` file. Pages applies its rules "regardless of
-whether or not an asset matches the incoming request", so `/*  /index.html
-200` would also replace the assets (Pages reports it as an infinite loop and
-ignores it), and it doesn't support rewrites with other status codes, such as
-404 ([Pages redirects docs](https://developers.cloudflare.com/pages/configuration/redirects/)).
-
-Other hosts work if they can rewrite unknown paths to `index.html`:
-`netlify.toml` has Netlify's settings and rules (Netlify applies them only
-where no file exists); nginx needs `try_files $uri /index.html`. GitHub Pages
-can't rewrite; its `404.html` workaround answers with HTTP 404.
+dist` (Cloudflare's emulator) serve the build the same way. Netlify reads the
+same `_redirects` and `404.html`. Other hosts need the same rewrites, or at
+least `index.html` for every path that isn't a file (nginx `try_files $uri
+/index.html`). GitHub Pages can't rewrite; its `404.html` workaround answers
+every viewer URL with HTTP 404.
 
 Consequences of being static:
 
-- **Soft 404s:** every viewer URL answers 200. Bad URLs show a "Not Found"
-  page, but crawlers see success.
+- **Soft 404s, partly:** unknown paths are real 404s, but any URL under a
+  viewer prefix answers 200, even when the notebook doesn't exist; the app
+  shows the error, while crawlers see success.
 - **No server-side config:** settings are build-time environment variables,
   e.g. the URL of the server-rendered viewer to link to (default
   `https://nbviewer.org/`) and the Binder base URL.
@@ -142,9 +145,9 @@ iframe (phase 4).
 ### Phase 1 (minimal): static site, `/url/` and `/urls/` (done)
 
 - Repo setup: rspack build into `dist/`; `index.html` generated with
-  absolute, content-hashed asset URLs; `_headers`, `wrangler.toml`,
-  `netlify.toml`; a local preview server that does the same rewrite; README
-  with deploy steps.
+  absolute, content-hashed asset URLs; `_redirects`, `_headers`,
+  `wrangler.toml`; a local preview server that serves the build the same way;
+  README with deploy steps.
 - Router for `url/{host}/{path}` and `urls/{host}/{path}` (with nbviewer's
   encoding of query strings as a trailing `%3F...` segment).
 - Fetch in the browser, with clear errors (CORS, HTTP status, invalid JSON,

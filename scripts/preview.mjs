@@ -1,6 +1,7 @@
-// Serve dist/ the way Cloudflare Pages does (and Netlify, with the rules in
-// netlify.toml): existing files as themselves, missing /static/ files as
-// 404s, every other path as index.html with status 200.
+// Serve dist/ the way Cloudflare Pages (or Netlify) does with
+// public/_redirects: existing files as themselves; viewer URLs (url/, urls/,
+// github/, gist/) as index.html with status 200; missing /static/ files as
+// static/404.html and every other path as 404.html, with status 404.
 //
 //   npm run build && npm run preview    (PORT=8080 by default)
 
@@ -43,14 +44,15 @@ createServer(async (req, res) => {
   }
   let file = normalize(join(root, pathname));
   let status = 200;
-  if (!file.startsWith(root + sep) || !(await isFile(file))) {
-    // missing assets are 404s, anything else gets the app
-    if (pathname.startsWith('/static/')) {
-      file = join(root, 'static', '404.html');
-      status = 404;
-    } else {
-      file = join(root, 'index.html');
-    }
+  if (/^\/(url|urls|github|gist)\//.test(pathname)) {
+    file = join(root, 'index.html');
+  } else if (pathname === '/' || pathname === '') {
+    file = join(root, 'index.html');
+  } else if (!file.startsWith(root + sep) || !(await isFile(file))) {
+    status = 404;
+    file = pathname.startsWith('/static/')
+      ? join(root, 'static', '404.html')
+      : join(root, '404.html');
   }
   res.writeHead(status, {
     'Content-Type': types[extname(file)] ?? 'application/octet-stream'

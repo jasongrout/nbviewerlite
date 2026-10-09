@@ -1,21 +1,6 @@
-# Netlify (the site is set up for Cloudflare Pages; see README.md).
+# Netlify (the site is set up for Cloudflare Pages; see README.md). Netlify
+# reads public/_redirects and serves 404.html for unknown paths, too.
 
 [build]
   command = "npm run build"
   publish = "dist"
-
-# Cloudflare Pages does both of these by itself (README.md). Netlify applies
-# rules only to paths with no file.
-
-# Missing assets are real 404s, not the app.
-[[redirects]]
-  from = "/static/*"
-  to = "/static/404.html"
-  status = 404
-
-# Every other path gets the app. Status 200 makes this a rewrite: the
-# browser keeps the requested URL, which the app reads.
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
