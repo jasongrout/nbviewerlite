@@ -1,8 +1,22 @@
-# Cloudflare Pages configuration (see "Deployment" in README.md).
-#
-# The project name must match this one. Pages serves dist/: files as
-# themselves, viewer URLs as the app (rewrites in _redirects), and 404.html
-# (also the app) or static/404.html for other unknown paths.
+# Cloudflare Workers, serving the static build (see "Deployment" in
+# README.md). The name must match the Worker's name in Cloudflare.
 name = "nbviewerlite"
-pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
+
+# Preview deployments get URLs on workers.dev
+# (<preview>-nbviewerlite.<subdomain>.workers.dev). This is a setting of the
+# deployed Worker: `wrangler deploy` applies it, `wrangler preview` doesn't.
+# It must stay above the [tables] below to be a top-level setting.
+preview_urls = true
+
+# dist/ as static assets: files as themselves; viewer URLs rewritten to the
+# app by dist/_redirects; other unknown paths get the nearest 404.html
+# (the app, or static/404.html under /static/) with status 404.
+[assets]
+directory = "./dist"
+not_found_handling = "404-page"
+
+# Preview deployments: Workers Builds runs `npx wrangler preview` for
+# branches other than the production branch, which needs this block (it can
+# stay empty; the settings above apply).
+[previews]

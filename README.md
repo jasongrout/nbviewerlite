@@ -36,52 +36,49 @@ npm run preview      # serve dist/ like the production hosts do
 
 ## Deployment
 
-The site runs on Cloudflare Pages. `npm run build` writes a static site to
-`dist/`, and Pages serves it like this:
+The site runs on Cloudflare Workers, as static assets (no Worker code).
+`npm run build` writes the site to `dist/`, and `wrangler.toml` serves it:
 
 - files as themselves: content-hashed assets under `/static/`, `favicon.ico`,
   `robots.txt`;
 - viewer URLs (`/url/...`, `/urls/...`, `/github/...`, `/gist/...`) get the
   app, with status 200, through the rewrites in `_redirects`
   (`/github/*  /  200`, ...). The browser keeps the requested URL, which the
-  app reads. The rules point at `/` rather than `/index.html`, which Pages
-  rejects as an infinite loop;
-- every other unknown path gets `404.html`, a copy of the app, with status
-  404. It shows "not found", or redirects nbviewer's old bare gist-id URLs
-  (`/{id}`) to `/gist/{id}`;
-- missing `/static/` files get `static/404.html`, with status 404;
+  app reads. The rules point at `/` rather than `/index.html`, which
+  Cloudflare rejects as an infinite loop;
+- every other unknown path gets the nearest `404.html` with status 404
+  (`not_found_handling = "404-page"`): the top-level one is a copy of the
+  app, which shows "not found" or redirects nbviewer's old bare gist-id URLs
+  (`/{id}`) to `/gist/{id}`; under `/static/` it's `static/404.html`;
 - headers from `_headers`.
 
 New URL prefixes (e.g. `/format/` in phase 3) need a rule in
-`public/_redirects`.
+`public/_redirects`. The site must be served from the root of its domain.
 
-The site must be served from the root of its domain.
+### Cloudflare
 
-### Cloudflare Pages
+One-time setup, in the Cloudflare dashboard: create a Worker from this GitHub
+repository (Workers & Pages > Create > Import a repository), named
+`nbviewerlite` as in `wrangler.toml`, with build command `npm run build` and
+deploy command `npx wrangler deploy`. Node.js comes from `.node-version`.
+To change the build settings below, add them as build variables.
 
-One-time setup, in the Cloudflare dashboard:
+Pushes to the production branch deploy the site. Other branches get preview
+deployments: Workers Builds runs `npx wrangler preview` for them, which needs
+the (empty) `[previews]` block in `wrangler.toml`. Previews are served at
+`https://<preview>-nbviewerlite.<subdomain>.workers.dev` because of
+`preview_urls = true`, which takes effect when the production branch deploys
+it (`wrangler preview` doesn't change it); until then, previews build but have
+no URL.
 
-1. Create a Pages project connected to this GitHub repository
-   (Workers & Pages > Create > Pages > Connect to Git).
-2. Project name: `nbviewerlite`, as in `wrangler.toml`.
-3. Production branch: `main`. Framework preset: none. Build command:
-   `npm run build`. Build output directory: `dist`.
-4. Save and deploy.
-
-Node.js comes from `.node-version`. Every push to `main` deploys to
-production (`nbviewerlite.pages.dev`). Other branches and pull requests get
-preview deployments at `<branch>.nbviewerlite.pages.dev`. To change the build
-settings below, add them as environment variables in the project's settings.
-
-To check a build the way Pages serves it, with Cloudflare's local emulator:
+To check a build the way Cloudflare serves it, with its local emulator:
 
 ```shell
 npm run build
-npx wrangler pages dev dist
+npx wrangler dev
 ```
 
-A local build can also be uploaded without the Git integration:
-`npx wrangler pages deploy dist --project-name nbviewerlite`, after
+A local build can also be deployed directly: `npx wrangler deploy`, after
 `npx wrangler login`.
 
 ### Other hosts

@@ -1,4 +1,4 @@
-// Serve dist/ the way Cloudflare Pages (or Netlify) does with
+// Serve dist/ the way Cloudflare (wrangler.toml) or Netlify does with
 // public/_redirects: existing files as themselves; viewer URLs (url/, urls/,
 // github/, gist/) as index.html with status 200; missing /static/ files as
 // static/404.html and every other path as 404.html, with status 404.
