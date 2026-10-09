@@ -1,6 +1,6 @@
 /**
- * How the static host and the app answer URLs: status codes, nbviewer's
- * redirects, and the landing page form.
+ * How the static host and the app answer URLs: status codes, headers,
+ * nbviewer's redirects, and the landing page form.
  */
 
 import type { Page } from '@playwright/test';
@@ -60,6 +60,30 @@ test.describe('status codes', () => {
     await expect(page.getByRole('alert')).toContainText(
       'fetching https://nb.example/missing.ipynb'
     );
+  });
+});
+
+test.describe('headers', () => {
+  test('every response has the ones from _headers', async ({ request }) => {
+    const paths = [
+      '/',
+      '/github/ipython/ipython/blob/main/docs/a.ipynb',
+      '/robots.txt',
+      '/nonsense/path',
+      '/static/js/missing.js'
+    ];
+    for (const path of paths) {
+      const response = await request.get(path);
+      expect(response.headers(), path).toMatchObject({
+        'x-content-type-options': 'nosniff',
+        'referrer-policy': 'strict-origin-when-cross-origin'
+      });
+    }
+  });
+
+  test('the files that set them are not served', async ({ request }) => {
+    expect((await request.get('/_headers')).status()).toBe(404);
+    expect((await request.get('/_redirects')).status()).toBe(404);
   });
 });
 
