@@ -23,11 +23,15 @@ export function link(href: string, text: string): HTMLElement {
   return h('a', { href }, text);
 }
 
-/** Add a link to the header's link bar (nbviewer's navbar icons). */
+/**
+ * Add a link to the header's link bar (nbviewer's navbar icons), optionally
+ * one that downloads a file with the given name.
+ */
 export function addHeaderLink(
   href: string | null,
   title: string,
-  iconName: IconName
+  iconName: IconName,
+  download?: string
 ): void {
   const bar = document.getElementById('nbv-links');
   if (!bar) {
@@ -37,10 +41,12 @@ export function addHeaderLink(
     icon(iconName),
     h('span', { class: 'nbv-link-text' }, title)
   ];
+  const attrs: Record<string, string> =
+    download === undefined ? {} : { download };
   bar.append(
     href === null
       ? h('span', { class: 'nbv-link', title }, ...content)
-      : h('a', { class: 'nbv-link', href, title }, ...content)
+      : h('a', { class: 'nbv-link', href, title, ...attrs }, ...content)
   );
 }
 
@@ -65,10 +71,14 @@ export function showError(
   );
 }
 
-/** The landing page: paste a URL (or GitHub name, gist id), go to its view. */
+/**
+ * The landing page: paste a URL (or GitHub name, gist id), go to its view.
+ * `below` follows the form (the examples).
+ */
 export function showHome(
   root: HTMLElement,
-  toPath: (input: string) => string | null
+  toPath: (input: string) => string | null,
+  ...below: Node[]
 ): void {
   const input = h('input', {
     type: 'text',
@@ -103,11 +113,14 @@ export function showHome(
         {},
         'A simple way to share Jupyter notebooks. This version of ',
         link('https://nbviewer.org', 'nbviewer'),
-        ' fetches and renders notebooks in your browser.'
+        ' fetches and renders notebooks in your browser (',
+        link('/faq', 'FAQ'),
+        ').'
       ),
       form,
       message
-    )
+    ),
+    ...below
   );
   input.focus();
 }

@@ -12,12 +12,32 @@ Paths match nbviewer.org's, so changing the hostname is enough:
     /github/ipython/ipython/tree/6.x/examples/
     /github/ipython/
     /gist/fperez/<gist id>
+    /format/slides/github/<user>/<repo>/blob/<ref>/<notebook>.ipynb
+    /format/script/url/<host>/<path>.ipynb
+    /faq
 
 - `/url/` and `/urls/` fetch from any host that allows cross-origin requests
   (CORS). When that fails, the page links to the same notebook on nbviewer.org.
 - GitHub notebooks load from raw.githubusercontent.com, without GitHub API
   requests. Directory listings, repository and user pages, and gists use the
   GitHub API, which allows 60 requests per hour per visitor IP.
+- Notebooks in every nbformat version render: nbformat 1 to 3 are upgraded
+  to 4 in the browser, as nbviewer.org does.
+- Outputs render with JupyterLab's renderers, including Vega and Vega-Lite
+  charts, JSON trees, PDFs and Mermaid diagrams (also in Markdown).
+- ipywidgets render from the widget state saved in the notebook, without a
+  kernel: widgets show their saved values and respond to input, and
+  `jslink` links work, but Python callbacks don't run. Third-party widget
+  libraries (bqplot, ipyleaflet, ...) load from jsDelivr, as on nbviewer.org.
+- Like nbviewer, every notebook URL also works under `/format/script/` (the
+  notebook as nbconvert's script exporter writes it, with a download link)
+  and `/format/slides/` (a reveal.js slideshow). Notebook pages link to the
+  formats that apply, and their links to other notebooks stay in the format,
+  as on nbviewer.org.
+- HTML files in repositories and gists render as pages, as on nbviewer.org,
+  but in a sandboxed iframe with its own (opaque) origin. Their stylesheets
+  and scripts from the same repository are inlined, since
+  raw.githubusercontent.com serves them as plain text.
 
 See [PLAN.md](PLAN.md) for the design and the roadmap.
 
@@ -29,31 +49,54 @@ Requires Node.js 22.6 or later.
 npm ci
 npm start            # dev server with live rebuilds, at http://localhost:8080/
 npm test             # unit tests
+npm run test:e2e     # end-to-end tests in Chromium (builds first)
 npm run typecheck
 npm run build        # production build into dist/
 npm run preview      # serve dist/ like the production hosts do
 ```
+
+The end-to-end tests (Playwright, `test/e2e/`) build the site, serve it with
+the preview server on port 8107 (`E2E_PORT` changes it) and drive Chromium.
+Fixtures in `test/e2e/fixtures.ts` answer for every other host the app talks
+to (the GitHub API, raw.githubusercontent.com, test hosts for `/url/`
+notebooks); a request without a fixture fails the test, so the tests never
+touch the network. Run `npx playwright install chromium` once, or set
+`CHROMIUM_EXECUTABLE` to an installed Chromium. Failures leave traces in
+`test-results/` and a report in `playwright-report/`.
+
+Some unit tests compare with reference outputs of Python's nbformat and
+nbconvert, stored in `test/fixtures/`; the commands that regenerate them are
+in the tests (`test/convert.test.ts`) and in `test/fixtures/generate.py`,
+which needs Python 3.14, the version nbviewer.org runs: IPython's
+conversions depend on Python's tokenizer.
 
 ## Deployment
 
 The site runs on Cloudflare Workers, as static assets (no Worker code).
 `npm run build` writes the site to `dist/`, and `wrangler.toml` serves it:
 
-- files as themselves: content-hashed assets under `/static/`, `favicon.ico`,
-  `robots.txt`;
-- viewer URLs (`/url/...`, `/urls/...`, `/github/...`, `/gist/...`) get the
-  app, with status 200, through the rewrites in `_redirects`
-  (`/github/*  /  200`, ...). The browser keeps the requested URL, which the
-  app reads. The rules point at `/` rather than `/index.html`, which
-  Cloudflare rejects as an infinite loop;
+- files as themselves: `favicon.ico`, `robots.txt`, and the assets under
+  `/static/`. Most of those are content-hashed (scripts, fonts, images), but
+  not all (RequireJS, named by its version, and the front-page thumbnails),
+  so they keep the default caching, revalidated with ETags;
+- viewer URLs (`/url/...`, `/urls/...`, `/github/...`, `/gist/...`,
+  `/format/...`) and the FAQ (`/faq`, `/faq/`) get the app, with status 200,
+  through the rewrites in `_redirects` (`/github/*  /  200`, ...; a rule
+  without `*` matches one exact path, hence two for the FAQ). The browser
+  keeps the requested URL, which the app reads. The rules point at `/`
+  rather than `/index.html`, which Cloudflare rejects as an infinite loop;
 - every other unknown path gets the nearest `404.html` with status 404
   (`not_found_handling = "404-page"`): the top-level one is a copy of the
   app, which shows "not found" or redirects nbviewer's old bare gist-id URLs
   (`/{id}`) to `/gist/{id}`; under `/static/` it's `static/404.html`;
-- headers from `_headers`.
+- every response gets the headers in `_headers`, including a
+  `Permissions-Policy` that keeps notebooks from using the camera,
+  microphone, location and other powerful features (see
+  [PLAN.md](PLAN.md#trust-and-security)).
 
-New URL prefixes (e.g. `/format/` in phase 3) need a rule in
-`public/_redirects`. The site must be served from the root of its domain.
+New URL prefixes need a rule in `public/_redirects`, and in
+`scripts/preview.mjs` (which reads `_headers`, but not `_redirects`). The
+site must be served from the root of its domain.
 
 ### Cloudflare
 
@@ -83,10 +126,11 @@ A local build can also be deployed directly: `npx wrangler deploy`, after
 
 ### Other hosts
 
-- **Netlify:** reads the same `_redirects` file and `404.html`;
-  `netlify.toml` has the build settings.
+- **Netlify:** reads the same `_redirects` and `_headers` files, and serves
+  `404.html` for unknown paths; `netlify.toml` has the build settings.
 - Others need the same rewrites, or at least `index.html` (status 200) for
-  every path that isn't a file, e.g. nginx with `try_files $uri /index.html;`.
+  every path that isn't a file, e.g. nginx with `try_files $uri /index.html;`,
+  and the headers from `_headers`.
 
 ### Build settings
 
@@ -99,4 +143,7 @@ Environment variables read at build time:
 
 ## License
 
-BSD 3-Clause, like nbviewer, which this is derived from.
+BSD 3-Clause, like nbviewer, which this is derived from. The front-page
+examples (`src/frontpage.json`), their thumbnails
+(`public/static/img/example-nb/`) and the FAQ (`src/faq.md`) are adapted from
+nbviewer, under the same license.

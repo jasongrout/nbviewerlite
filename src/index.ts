@@ -1,6 +1,7 @@
 import jQuery from 'jquery';
 
 import {
+  contentLink,
   createContext,
   type IContext,
   readConfig,
@@ -18,6 +19,7 @@ import { showNotebook } from './notebook-view.ts';
 import { link, showError, showHome } from './page.ts';
 import { viewerPathForInput } from './rewrites.ts';
 import { fetchUrl, parseRoute, viewerPath } from './route.ts';
+import { showcase } from './showcase.ts';
 
 import './style.css';
 
@@ -36,9 +38,12 @@ async function showUrl(
 
   // Like nbviewer: a relative link from a url/urls notebook to a
   // non-notebook file opens the file itself rather than trying to render it.
+  // Also in other formats, where nbviewer's test misses these links.
   if (
     !/\.ipynb$/i.test(filename) &&
-    document.referrer.startsWith(window.location.origin + '/url')
+    document.referrer.startsWith(
+      `${window.location.origin}/${ctx.formatPrefix}url`
+    )
   ) {
     window.location.replace(url);
     return;
@@ -48,12 +53,21 @@ async function showUrl(
     url,
     title: filename,
     linkFor: absolute => {
-      const path = /\.ipynb$/i.test(new URL(absolute).pathname)
-        ? viewerPath(absolute)
-        : null;
-      return path === null ? absolute : viewerUrl(path);
+      const { pathname } = new URL(absolute);
+      const path = /\.ipynb$/i.test(pathname) ? viewerPath(absolute) : null;
+      return path === null ? absolute : contentLink(ctx, path, pathname);
     }
   });
+}
+
+/** The FAQ and its Markdown renderer are a separate chunk. */
+async function showFaqPage(root: HTMLElement): Promise<void> {
+  try {
+    const { showFaq } = await import(/* webpackChunkName: "faq" */ './faq.ts');
+    showFaq(root);
+  } catch (err) {
+    showError(root, err instanceof Error ? err.message : String(err));
+  }
 }
 
 async function main(): Promise<void> {
@@ -65,11 +79,17 @@ async function main(): Promise<void> {
   const route = parseRoute(ctx.path);
   switch (route.kind) {
     case 'home':
-      showHome(root, input => {
-        const path = viewerPathForInput(input);
-        return path === null ? null : viewerUrl(path);
-      });
+      showHome(
+        root,
+        input => {
+          const path = viewerPathForInput(input);
+          return path === null ? null : viewerUrl(path);
+        },
+        showcase()
+      );
       return;
+    case 'faq':
+      return showFaqPage(root);
     case 'redirect':
       redirect(route.path);
       return;

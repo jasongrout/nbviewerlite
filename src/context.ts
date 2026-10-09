@@ -1,4 +1,6 @@
+import { keepsFormat } from './formats.ts';
 import { addHeaderLink, link, showError } from './page.ts';
+import { type Format, splitFormat } from './route.ts';
 
 export interface IConfig {
   /** Server-rendered nbviewer with the same URL scheme, or null. */
@@ -20,18 +22,33 @@ export interface IContext {
   config: IConfig;
   /** The current viewer path, without the leading slash, still encoded. */
   path: string;
+  /** How notebooks are shown: nbviewer's format/{name}/ paths. */
+  format: Format;
+  /** The viewer path without its format/{name}/ prefix. */
+  formatBase: string;
+  /** That prefix (e.g. 'format/slides/'), or '' for paths without one. */
+  formatPrefix: string;
   /** The same page on the server-rendered nbviewer, if configured. */
   nbviewerPage: { url: string; label: string } | null;
 }
 
 export function createContext(root: HTMLElement, config: IConfig): IContext {
-  const path = window.location.pathname.replace(/^\//, '');
+  const path = currentPath();
+  const { format, base: formatBase } = splitFormat(path) ?? {
+    format: 'html',
+    base: path
+  };
+  const formatPrefix = path.slice(0, path.length - formatBase.length);
   let nbviewerPage = null;
   if (config.nbviewerUrl) {
     const base = config.nbviewerUrl.replace(/\/?$/, '/');
     nbviewerPage = { url: base + path, label: new URL(base).host };
   }
-  return { root, config, path, nbviewerPage };
+  return { root, config, path, format, formatBase, formatPrefix, nbviewerPage };
+}
+
+function currentPath(): string {
+  return window.location.pathname.replace(/^\//, '');
 }
 
 /** The URL of a viewer path (no leading slash). */
@@ -39,10 +56,25 @@ export function viewerUrl(path: string): string {
   return '/' + path;
 }
 
-/** Replace the current page with another viewer path, like an HTTP redirect. */
+/**
+ * The URL of a link from a notebook or HTML file to viewer path `path`,
+ * which shows the file at `file` (a name or URL path): in the page's
+ * format, as on nbviewer.org, if keepsFormat says so.
+ */
+export function contentLink(ctx: IContext, path: string, file: string): string {
+  return viewerUrl((keepsFormat(file) ? ctx.formatPrefix : '') + path);
+}
+
+/**
+ * Replace the current page with another viewer path, like an HTTP redirect.
+ * Like nbviewer's redirects, it stays in the current format.
+ */
 export function redirect(path: string): void {
+  const current = currentPath();
+  const base = splitFormat(current)?.base ?? current;
+  const prefix = current.slice(0, current.length - base.length);
   window.location.replace(
-    viewerUrl(path) + window.location.search + window.location.hash
+    viewerUrl(prefix + path) + window.location.search + window.location.hash
   );
 }
 

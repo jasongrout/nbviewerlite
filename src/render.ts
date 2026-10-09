@@ -1,36 +1,74 @@
+import { EditorView } from '@codemirror/view';
 import { Sanitizer } from '@jupyterlab/apputils';
 import { MarkdownCell } from '@jupyterlab/cells';
 import {
   CodeMirrorEditorFactory,
   CodeMirrorMimeTypeService,
   EditorExtensionRegistry,
-  EditorLanguageRegistry,
   EditorThemeRegistry,
   ybinding
 } from '@jupyterlab/codemirror';
+import jsonExtensions from '@jupyterlab/json-extension';
 import { createMarkdownParser } from '@jupyterlab/markedparser-extension';
 import { MathJaxTypesetter } from '@jupyterlab/mathjax-extension';
+import {
+  MermaidManager,
+  MermaidMarkdown,
+  RenderedMermaid,
+  rendererFactory as mermaidRendererFactory
+} from '@jupyterlab/mermaid';
 import type * as nbformat from '@jupyterlab/nbformat';
 import { NotebookModel, StaticNotebook } from '@jupyterlab/notebook';
+import pdfExtensions from '@jupyterlab/pdf-extension';
 import {
   RenderMimeRegistry,
   standardRendererFactories
 } from '@jupyterlab/rendermime';
 import type { IRenderMime } from '@jupyterlab/rendermime-interfaces';
+import vegaExtension from '@jupyterlab/vega5-extension';
 import { Widget } from '@lumino/widgets';
 
 import { javaScriptRendererFactory } from './javascript.ts';
+import { codeLanguage, defaultLanguages } from './languages.ts';
+import { savedWidgetState, withoutMissingWidgetViews } from './widget-state.ts';
+import { widgetRendererFactory } from './widgets.ts';
 
 import '@jupyterlab/theme-light-extension/style/variables.css';
 import '@jupyterlab/notebook/style/index.js';
 import '@jupyterlab/mathjax-extension/style/index.js';
+import '@jupyterlab/json-extension/style/index.js';
+import '@jupyterlab/pdf-extension/style/index.js';
+import '@jupyterlab/vega5-extension/style/index.js';
+import '@jupyterlab/mermaid/style/index.js';
 import './style.css';
 
-function createEditorServices() {
-  const languages = new EditorLanguageRegistry();
-  for (const language of EditorLanguageRegistry.getDefaultLanguages()) {
-    languages.addLanguage(language);
+/**
+ * The mime renderers JupyterLab adds through extensions: JSON (and JSON
+ * Lines), PDF, Vega 5 and Vega-Lite 3 to 5, and Mermaid. Their libraries
+ * (vega-embed, mermaid, the JSON tree) load only when a notebook needs them.
+ */
+const mimeExtensions: IRenderMime.IExtension[] = [
+  // each package exports an extension or a list of them
+  jsonExtensions,
+  pdfExtensions,
+  vegaExtension,
+  // What @jupyterlab/mermaid-extension registers ("one more than markdown").
+  // That package's other plugins need a JupyterLab application.
+  {
+    id: '@jupyterlab/mermaid-extension:factory',
+    rendererFactory: mermaidRendererFactory,
+    rank: 61
   }
+].flat();
+
+// One Mermaid manager for text/vnd.mermaid outputs and ```mermaid blocks in
+// markdown, as JupyterLab's mermaid-extension sets up. Without a theme
+// manager, it uses Mermaid's default (light) theme.
+const mermaidManager = new MermaidManager();
+RenderedMermaid.manager = mermaidManager;
+
+function createEditorServices() {
+  const languages = defaultLanguages();
 
   const themes = new EditorThemeRegistry();
   for (const theme of EditorThemeRegistry.getDefaultThemes()) {
@@ -52,6 +90,17 @@ function createEditorServices() {
         ybinding({ ytext: sharedModel.ysource })
       );
     }
+  });
+  // Read-only editors are still contenteditable, so a click in code would
+  // put the focus there and keys would move a caret instead of scrolling the
+  // page or changing slides. Code is static text on nbviewer.org; here it
+  // stays selectable, but can't take the focus.
+  extensions.addExtension({
+    name: 'not-editable',
+    factory: () =>
+      EditorExtensionRegistry.createImmutableExtension(
+        EditorView.editable.of(false)
+      )
   });
 
   const factory = new CodeMirrorEditorFactory({ extensions, languages });
@@ -102,7 +151,9 @@ export function renderNotebook(
   const rendermime = new RenderMimeRegistry({
     initialFactories: standardRendererFactories,
     latexTypesetter: new MathJaxTypesetter(),
-    markdownParser: createMarkdownParser(languages),
+    markdownParser: createMarkdownParser(languages, {
+      blocks: [new MermaidMarkdown({ mermaid: mermaidManager })]
+    }),
     resolver,
     sanitizer,
     linkHandler: {
@@ -114,6 +165,16 @@ export function renderNotebook(
     }
   });
   rendermime.addFactory(javaScriptRendererFactory, 0);
+  // With the extensions' ranks, or else the factories' own, as JupyterLab does
+  for (const { rendererFactory, rank } of mimeExtensions) {
+    rendermime.addFactory(rendererFactory, rank);
+  }
+  // ipywidgets, from the state saved in the notebook; preferred over the
+  // other MIME types, as in JupyterLab and nbconvert.
+  const widgetState = savedWidgetState(nb.metadata);
+  if (widgetState) {
+    rendermime.addFactory(widgetRendererFactory(widgetState, rendermime), -10);
+  }
 
   const readOnly = { readOnly: true };
   const notebook = new StaticNotebook({
@@ -138,7 +199,13 @@ export function renderNotebook(
   // One undo manager for the document instead of one per cell: yjs warns
   // about the per-cell ones while cells are created from JSON.
   const model = new NotebookModel({ disableDocumentWideUndoRedo: false });
-  model.fromJSON(trustCells(nb));
+  model.fromJSON(trustCells(withoutMissingWidgetViews(nb, widgetState)));
+  // Python, for notebooks that don't name their language (the model then has
+  // an empty name)
+  model.setMetadata(
+    'language_info',
+    codeLanguage(model.getMetadata('language_info'))
+  );
   notebook.model = model;
   for (const cell of notebook.widgets) {
     cell.readOnly = true;

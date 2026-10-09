@@ -7,12 +7,21 @@ import {
   gistPath,
   githubPath,
   parseRoute,
+  splitFormat,
   viewerPath
 } from '../src/route.ts';
 
 test('empty path and index.html are the landing page', () => {
   assert.deepEqual(parseRoute(''), { kind: 'home' });
   assert.deepEqual(parseRoute('index.html'), { kind: 'home' });
+});
+
+test('faq and faq/ are the FAQ, as on nbviewer', () => {
+  assert.deepEqual(parseRoute('faq'), { kind: 'faq' });
+  assert.deepEqual(parseRoute('faq/'), { kind: 'faq' });
+  assert.deepEqual(parseRoute('faq//'), { kind: 'notfound' });
+  assert.deepEqual(parseRoute('faq/x'), { kind: 'notfound' });
+  assert.deepEqual(parseRoute('FAQ'), { kind: 'notfound' });
 });
 
 test('unknown paths are not found', () => {
@@ -277,6 +286,74 @@ test('bare gist ids redirect to gist/', () => {
     kind: 'redirect',
     path: 'gist/12345'
   });
+});
+
+test('every viewer path is also served under format/{name}/', () => {
+  const id = '0123456789abcdef0123';
+  for (const path of [
+    'github/ipython/ipython/blob/6.x/examples/IPython%20Kernel/Index.ipynb',
+    'github/ipython/ipython/tree/6.x/examples/',
+    'github/ipython/',
+    'urls/example.org/a/b.ipynb',
+    `gist/fperez/${id}/a.ipynb`,
+    'gist/fperez/'
+  ]) {
+    for (const format of ['html', 'slides', 'script']) {
+      assert.deepEqual(
+        parseRoute(`format/${format}/${path}`),
+        parseRoute(path),
+        path
+      );
+    }
+  }
+});
+
+test('redirects under format/{name}/ stay in the format', () => {
+  // the paths are relative to the format; redirect() keeps the prefix
+  assert.deepEqual(parseRoute('format/slides/github/ipython'), {
+    kind: 'redirect',
+    path: 'github/ipython/'
+  });
+  assert.deepEqual(
+    parseRoute('format/script/url/github.com/u/r/blob/main/a.ipynb'),
+    { kind: 'redirect', path: 'github/u/r/blob/main/a.ipynb' }
+  );
+  assert.deepEqual(parseRoute('format/slides/0123456789abcdef0123'), {
+    kind: 'redirect',
+    path: 'gist/0123456789abcdef0123'
+  });
+});
+
+test('unknown formats, the landing page and the FAQ under format/ are not found', () => {
+  for (const path of [
+    'format/pdf/github/ipython/',
+    'format/Slides/github/ipython/',
+    'format/slides/',
+    'format/slides/index.html',
+    'format/slides',
+    'format/',
+    'format/slides/format/script/github/ipython/',
+    'format/slides/faq',
+    'format/html/faq/'
+  ]) {
+    assert.deepEqual(parseRoute(path), { kind: 'notfound' }, path);
+  }
+});
+
+test('splitFormat separates the format from the viewer path', () => {
+  assert.deepEqual(splitFormat('format/slides/github/u/r/blob/m/a.ipynb'), {
+    format: 'slides',
+    base: 'github/u/r/blob/m/a.ipynb'
+  });
+  assert.deepEqual(splitFormat('format/html/urls/example.org/a.ipynb'), {
+    format: 'html',
+    base: 'urls/example.org/a.ipynb'
+  });
+  assert.deepEqual(splitFormat('github/u/'), {
+    format: 'html',
+    base: 'github/u/'
+  });
+  assert.equal(splitFormat('format/pdf/github/u/'), null);
 });
 
 test('viewer paths round-trip through parseRoute', () => {

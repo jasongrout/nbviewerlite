@@ -6,10 +6,13 @@ import {
   blobUrl,
   contentsPath,
   gistFileAnchor,
+  gistFileName,
   GitHubError,
   parseLinkHeader,
   rawUrl,
   repoFromApiUrl,
+  repoPathOf,
+  repoViewerPath,
   sortEntries,
   treeUrl,
   type IContentsEntry
@@ -98,6 +101,47 @@ test('sortEntries orders like nbviewer', () => {
       'file:setup.py'
     ]
   );
+});
+
+test('repoPathOf finds files in the repo at a ref', () => {
+  const base = 'https://raw.githubusercontent.com/u/r/feature/x/';
+  assert.equal(repoPathOf(base + 'a%20b/c.ipynb', base), 'a b/c.ipynb');
+  assert.equal(repoPathOf(base + 'docs/', base), 'docs/');
+  assert.equal(repoPathOf(base + 'a.html?x=1#top', base), 'a.html');
+  assert.equal(repoPathOf(base, base), '');
+  assert.equal(
+    repoPathOf('https://raw.githubusercontent.com/u/r/main/a.ipynb', base),
+    null
+  );
+  assert.equal(repoPathOf('https://example.org/u/r/feature/x/a', base), null);
+  assert.equal(repoPathOf(base + '%E0%A4%A.ipynb', base), null);
+  assert.equal(repoPathOf('not a url', base), null);
+});
+
+test('repoViewerPath maps links in the repo to viewer pages', () => {
+  const raw = 'https://raw.githubusercontent.com/u/r/feature/x/';
+  const link = (url: string) => repoViewerPath(url, 'u', 'r', 'feature/x');
+  assert.equal(
+    link(raw + 'a%20b/c.ipynb#Some-heading'),
+    'github/u/r/blob/feature%2Fx/a%20b/c.ipynb#Some-heading'
+  );
+  assert.equal(link(raw + 'docs/'), 'github/u/r/tree/feature%2Fx/docs/');
+  assert.equal(link(raw + 'docs'), 'github/u/r/blob/feature%2Fx/docs');
+  assert.equal(link(raw), 'github/u/r/tree/feature%2Fx/');
+  assert.equal(link('https://example.org/a.ipynb'), null);
+});
+
+test('gistFileName names files next to a gist file', () => {
+  const raw = 'https://gist.githubusercontent.com/u/abc/raw/123/page.html';
+  const dir = 'https://gist.githubusercontent.com/u/abc/raw/123/';
+  assert.equal(
+    gistFileName(dir + 'My%20Notebook.ipynb', raw),
+    'My Notebook.ipynb'
+  );
+  assert.equal(gistFileName(dir + 'style.css?v=2', raw), 'style.css');
+  assert.equal(gistFileName(dir + 'sub/style.css', raw), null);
+  assert.equal(gistFileName(dir, raw), null);
+  assert.equal(gistFileName('https://example.org/style.css', raw), null);
 });
 
 test('gistFileAnchor matches gist.github.com', () => {

@@ -18,6 +18,19 @@ const jupyterLogo = fs.readFileSync(
   'utf8'
 );
 
+// html-manager renders ipywidgets 7 with its aliased packages base7 (base
+// 4.1.7) and controls7. npm can't satisfy controls7's own dependency on
+// '@jupyter-widgets/base@^4' with base7, so it nests another base 4.1.7 (with
+// its own Backbone) under controls7.
+const htmlManager = path.dirname(
+  require.resolve('@jupyter-widgets/html-manager/package.json')
+);
+const base7 = path.dirname(
+  require.resolve('@jupyter-widgets/base7/package.json', {
+    paths: [htmlManager]
+  })
+);
+
 module.exports = (env, argv) => ({
   entry: './src/index.ts',
   // Handle AMD/UMD wrappers inside the bundle. Otherwise they call the page's
@@ -44,8 +57,19 @@ module.exports = (env, argv) => ({
         test: /\.ts$/,
         exclude: /node_modules/,
         loader: 'builtin:swc-loader',
-        options: { jsc: { parser: { syntax: 'typescript' } } },
+        // tsconfig.json's target; JupyterLab's packages are newer than that
+        // already, so compiling our own code further down only adds helpers
+        options: {
+          jsc: { parser: { syntax: 'typescript' }, target: 'es2020' }
+        },
         type: 'javascript/auto'
+      },
+      {
+        // One base 4.1.7: controls7's views then extend the classes that
+        // html-manager hands out for ipywidgets 7 models, and the widgets
+        // chunk carries one copy of each.
+        issuer: /[\\/]@jupyter-widgets[\\/]controls7[\\/]/,
+        resolve: { alias: { '@jupyter-widgets/base$': base7 } }
       },
       {
         test: /\.css$/,
@@ -56,7 +80,15 @@ module.exports = (env, argv) => ({
       { test: /\.(png|jpe?g|gif|woff2?|ttf|otf|eot)$/, type: 'asset/resource' },
       // JupyterLab imports SVG icons as strings from JS, and as URLs from CSS.
       { test: /\.svg$/, issuer: /\.[jt]s$/, type: 'asset/source' },
-      { test: /\.svg$/, issuer: /\.css$/, type: 'asset/inline' }
+      {
+        test: /\.svg$/,
+        issuer: /\.css$/,
+        // Font Awesome's SVG fonts (JupyterLab's and the widgets' icons) are
+        // big, and browsers use the woff2 ones: files like the other fonts.
+        exclude: /[\\/]webfonts[\\/]/,
+        type: 'asset/inline'
+      },
+      { test: /[\\/]webfonts[\\/].*\.svg$/, type: 'asset/resource' }
     ]
   },
   plugins: [

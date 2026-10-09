@@ -5,15 +5,19 @@
 
 import {
   addNbviewerLink,
+  contentLink,
   type IContext,
   redirect,
   setTitle,
   showFailure,
   viewerUrl
 } from './context.ts';
-import { apiGet, GIST_URL, gistFileAnchor } from './github.ts';
+import { apiGet, GIST_URL, gistFileAnchor, gistFileName } from './github.ts';
+import { isHtmlFile } from './html.ts';
+import { showHtml } from './html-view.ts';
 import { iconLink, table } from './listing.ts';
-import { fetchText, showNotebook } from './notebook-view.ts';
+import { fetchText } from './load.ts';
+import { showNotebook } from './notebook-view.ts';
 import { addHeaderLink, h, showStatus } from './page.ts';
 import { gistPath } from './route.ts';
 
@@ -85,6 +89,40 @@ export async function showGist(
     ]);
     return;
   }
+  const load = async () =>
+    file.truncated || file.content === undefined
+      ? fetchText(file.raw_url)
+      : file.content;
+  // Gists are flat: a relative URL names a file next to this one.
+  const fileFor = (url: string): IGistFile | null => {
+    const target = gistFileName(url, file.raw_url);
+    return target !== null &&
+      Object.prototype.hasOwnProperty.call(gist.files, target)
+      ? gist.files[target]
+      : null;
+  };
+  // Notebooks and HTML files in the gist open in the viewer, in the page's
+  // format.
+  const viewerLink = (url: string) => {
+    const target = fileFor(url)?.filename;
+    return target && (target.endsWith('.ipynb') || isHtmlFile(target))
+      ? contentLink(ctx, gistPath(user, gist.id, target), target) +
+          new URL(url).hash
+      : null;
+  };
+
+  if (isHtmlFile(name)) {
+    // nbviewer serves HTML files of a gist as pages
+    await showHtml(ctx, {
+      url: file.raw_url,
+      title: name,
+      load,
+      inlineUrl: url => fileFor(url)?.raw_url ?? null,
+      linkFor: viewerLink,
+      provider: [gist.html_url, 'Gist']
+    });
+    return;
+  }
   if (manyFiles && !name.endsWith('.ipynb')) {
     // nbviewer serves other files of a gist unchanged
     window.location.replace(file.raw_url);
@@ -94,19 +132,8 @@ export async function showGist(
   await showNotebook(ctx, {
     url: file.raw_url,
     title: name,
-    load: async () =>
-      file.truncated || file.content === undefined
-        ? fetchText(file.raw_url)
-        : file.content,
-    // gists are flat: a relative link to another notebook names a file in it
-    linkFor: absolute => {
-      const target = decodeURIComponent(
-        new URL(absolute).pathname.split('/').pop() ?? ''
-      );
-      return target in gist.files && target.endsWith('.ipynb')
-        ? viewerUrl(gistPath(user, gist.id, target))
-        : absolute;
-    },
+    load,
+    linkFor: url => viewerLink(url) ?? url,
     provider: [gist.html_url, 'Gist'],
     executorUrl: binderUrl(ctx, user, gist.id, name)
   });

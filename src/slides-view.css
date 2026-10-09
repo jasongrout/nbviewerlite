@@ -1,0 +1,126 @@
+/* format/slides/: the deck fills the window below the header. */
+
+body.nbv-slides-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.nbv-slides-page .nbv-header {
+  flex: none;
+}
+
+.nbv-slides-page .nbv-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nbv-slides-page .nbv-breadcrumbs ol {
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 0;
+}
+
+.nbv-slides-page .nbv-footer,
+.nbv-slides-receiver .nbv-header,
+.nbv-slides-receiver .nbv-breadcrumbs {
+  display: none;
+}
+
+.nbv-slides {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  /* nbconvert's reveal template sizes */
+  --jp-ui-font-size1: 20px;
+  --jp-content-font-size1: 20px;
+  --jp-code-font-size: 19px;
+  --jp-cell-prompt-width: 110px;
+}
+
+.nbv-slides .reveal {
+  position: absolute;
+  inset: 0;
+}
+
+/* .slides is also .jp-Notebook, for JupyterLab's cell styles, but slide
+   backgrounds show through it. */
+.nbv-slides .reveal .slides {
+  background: none;
+}
+
+/* Slides taller than the deck scroll (nbconvert's reveal_scroll option). */
+.nbv-slides .reveal .slides section:not(.stack) {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* nbconvert's overrides of notebook styles (reveal/static/custom_reveal.css) */
+
+.nbv-slides .reveal .slides {
+  text-align: left;
+}
+
+.nbv-slides .reveal table {
+  font-size: var(--jp-ui-font-size1);
+}
+
+.nbv-slides .reveal pre {
+  width: inherit;
+  padding: 0.4em;
+  margin: 0;
+  font-family: monospace, sans-serif;
+  font-size: 80%;
+  box-shadow: none;
+}
+
+.nbv-slides .reveal pre code {
+  padding: 0;
+}
+
+.nbv-slides .reveal section img {
+  border: 0;
+  box-shadow: none;
+}
+
+.nbv-slides .reveal .jp-OutputArea-output > pre {
+  width: 90%;
+  font-size: var(--jp-code-font-size);
+}
+
+.nbv-slides .jp-OutputPrompt {
+  margin: 5px 5px 0 0;
+}
+
+/* reveal.js's rules for its progress bar (.reveal .progress) hide
+   ipywidgets' progress bars too: give them back their own styles. */
+
+.nbv-slides .reveal .widget-hprogress > .progress,
+.nbv-slides .reveal .widget-vprogress > .progress {
+  display: block;
+  z-index: auto;
+  background-color: var(--jp-layout-color2);
+}
+
+.nbv-slides .reveal .widget-hprogress > .progress::after,
+.nbv-slides .reveal .widget-vprogress > .progress::after {
+  content: none;
+}
+
+.nbv-slides .reveal .widget-hprogress > .progress {
+  width: auto;
+  height: auto;
+}
+
+.nbv-slides .reveal .widget-vprogress > .progress {
+  width: var(--jp-widgets-progress-thickness);
+  height: auto;
+}

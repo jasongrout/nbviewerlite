@@ -6,7 +6,7 @@
  * Unauthenticated, GitHub allows 60 API requests per hour per IP.
  */
 
-import { encodePath } from './route.ts';
+import { encodePath, githubPath } from './route.ts';
 
 export const GITHUB_URL = 'https://github.com/';
 export const GITHUB_API_URL = 'https://api.github.com/';
@@ -123,6 +123,70 @@ export function blobUrl(user: string, repo: string, ref: string, path: string) {
 export function treeUrl(user: string, repo: string, ref: string, path: string) {
   const url = `${GITHUB_URL}${enc(user)}/${enc(repo)}/tree/${encodePath(ref)}`;
   return path ? `${url}/${encodePath(path)}` : url;
+}
+
+/**
+ * The repo path that `url` points to, if it is under `rawBase`, the raw URL
+ * of the repo's root at a ref: decoded, '' for the root, with a trailing
+ * slash kept (a directory). Null for other URLs.
+ */
+export function repoPathOf(url: string, rawBase: string): string | null {
+  let target: URL;
+  let base: URL;
+  try {
+    target = new URL(url);
+    base = new URL(rawBase);
+  } catch {
+    return null;
+  }
+  if (
+    target.origin !== base.origin ||
+    !target.pathname.startsWith(base.pathname)
+  ) {
+    return null;
+  }
+  try {
+    return target.pathname
+      .slice(base.pathname.length)
+      .split('/')
+      .map(decodeURIComponent)
+      .join('/');
+  } catch {
+    // malformed percent-encoding
+    return null;
+  }
+}
+
+/**
+ * The viewer path (with the fragment) for a link to `url`, resolved against
+ * a raw URL of the repo at `ref`: directories (trailing slash) get their
+ * listing, files their blob view. Null for URLs outside the repo.
+ */
+export function repoViewerPath(
+  url: string,
+  user: string,
+  repo: string,
+  ref: string
+): string | null {
+  const path = repoPathOf(url, rawUrl(user, repo, ref, ''));
+  if (path === null) {
+    return null;
+  }
+  const view =
+    path === '' || path.endsWith('/')
+      ? githubPath('tree', user, repo, ref, path.replace(/\/+$/, ''))
+      : githubPath('blob', user, repo, ref, path);
+  return view + new URL(url).hash;
+}
+
+/**
+ * The file name that `url` points to, if it is next to `rawUrl`, a raw URL
+ * of a file in a gist (gists are flat), decoded; null otherwise.
+ */
+export function gistFileName(url: string, rawUrl: string): string | null {
+  const dir = rawUrl.slice(0, rawUrl.lastIndexOf('/') + 1);
+  const name = repoPathOf(url, dir);
+  return name && !name.includes('/') ? name : null;
 }
 
 /** Contents API path for a file or directory. */

@@ -1,0 +1,214 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "# Title"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "tags": [
+     "kept"
+    ]
+   },
+   "source": "## Sub heading with breaks"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "###### Deep"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "# No level"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "### "
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "Lines kept\nwith their breaks"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "slideshow": {
+     "slide_type": "slide"
+    }
+   },
+   "source": "Lines from\nan old splitlines()"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "rendered": "<p>old</p>\n<p>rendered</p>",
+   "source": "$e^{i\\pi} + 1 = 0$"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": ""
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {
+    "format": "text/latex"
+   },
+   "source": "\\begin{equation}\nx\n\\end{equation}"
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "<b>html cell</b>"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": true,
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": "out\nmore\n"
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": "warning\n"
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": "no stream name"
+    },
+    {
+     "data": {
+      "text/html": "<b>\nbold</b>",
+      "text/latex": "$$\nx^2\n$$",
+      "text/plain": "<IPython.core.display.Math object>"
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/jpeg": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP\n",
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGA\nWjR9awAAAABJRU5ErkJggg==\n",
+      "image/svg+xml": "<svg xmlns=\"http://www.w3.org/2000/svg\">\n</svg>",
+      "text/plain": "<Figure>"
+     },
+     "metadata": {
+      "image/jpeg": {
+       "width": 10
+      },
+      "image/png": {
+       "height": 50,
+       "width": 100
+      }
+     },
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "application/javascript": "console.log(1);\nconsole.log(2);",
+      "application/json": {
+       "a": [
+        1,
+        2
+       ]
+      },
+      "text/markdown": "*full MIME keys pass through*"
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGA\nWjR9awAAAABJRU5ErkJggg==\n",
+      "pdf": "JVBERi0="
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    },
+    {
+     "ename": "ZeroDivisionError",
+     "evalue": "integer division or modulo by zero",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[1;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[1;31mZeroDivisionError\u001b[0m                         Traceback (most recent call last)",
+      "\u001b[1;32m<ipython-input-1>\u001b[0m in \u001b[0;36m<module>\u001b[1;34m()\u001b[0m",
+      "\u001b[1;31mZeroDivisionError\u001b[0m: integer division or modulo by zero"
+     ]
+    }
+   ],
+   "source": "import sys\nprint('out')\n1/0"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": ""
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": ""
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": "Second worksheet"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 0,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": "no prompt number"
+     },
+     "execution_count": null,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "text/html": "<i>no metadata</i>"
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": "x"
+  }
+ ],
+ "metadata": {
+  "celltoolbar": "Slideshow",
+  "custom": {
+   "kept": [
+    1,
+    2
+   ]
+  },
+  "orig_nbformat": 3,
+  "orig_nbformat_minor": 0
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

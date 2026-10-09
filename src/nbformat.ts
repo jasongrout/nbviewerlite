@@ -12,7 +12,7 @@ function isJsonMime(mime: string): boolean {
   );
 }
 
-function isLines(value: unknown): value is string[] {
+export function isLines(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(line => typeof line === 'string');
 }
 

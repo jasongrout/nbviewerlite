@@ -1,5 +1,6 @@
-# Netlify (the site is set up for Cloudflare Pages; see README.md). Netlify
-# reads public/_redirects and serves 404.html for unknown paths, too.
+# Netlify, as another host (the site is deployed as a Cloudflare Worker with
+# static assets; see README.md). Netlify reads public/_redirects and
+# public/_headers too, and serves 404.html for unknown paths.
 
 [build]
   command = "npm run build"
