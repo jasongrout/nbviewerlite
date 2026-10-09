@@ -110,6 +110,13 @@ try {
   document.getElementById('slide').textContent = e.name;
 }
 </script>`,
+  // a script twice
+  'docs/twice.html':
+    '<!DOCTYPE html><p id="count">0</p>' +
+    '<script src="js/count.js"></script><script src="js/count.js"></script>',
+  'docs/js/count.js':
+    "var count = document.getElementById('count');\n" +
+    'count.textContent = Number(count.textContent) + 1;\n',
   'notebooks/analysis.ipynb': notebook([
     markdown(
       '# Analysis\n\n[the report, section 2](../docs/report.html#section-2)'
@@ -336,6 +343,12 @@ test.describe('an HTML file in a repository', () => {
     await frame.getByRole('link', { name: 'section 2' }).click();
     await expect(section).toBeInViewport();
     await expect(page).toHaveURL(VIEW);
+  });
+
+  test('a script used twice runs twice', async ({ page }) => {
+    await page.goto('/github/fx/demo/blob/main/docs/twice.html');
+    const { frame } = htmlFrame(page, 'twice.html');
+    await expect(frame.locator('#count')).toHaveText('2');
   });
 });
 

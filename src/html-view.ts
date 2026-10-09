@@ -20,7 +20,6 @@ import {
 import {
   absoluteUrl,
   cssUrls,
-  dataUrl,
   inlineStylesheet,
   opensInViewer,
   ResourceLoader
@@ -213,16 +212,14 @@ async function inline(
   }
   const attr = isLink ? 'href' : 'src';
   const url = absoluteUrl(el.getAttribute(attr) ?? '', baseUrl);
-  const text = url === null ? null : await loader.load(url);
-  if (url === null || text === null) {
+  const data =
+    url === null
+      ? null
+      : await loader.inline(url, isLink ? 'text/css' : 'text/javascript');
+  if (data === null) {
     return;
   }
-  el.setAttribute(
-    attr,
-    isLink
-      ? dataUrl(await inlineStylesheet(text, url, loader), 'text/css')
-      : dataUrl(text, 'text/javascript')
-  );
+  el.setAttribute(attr, data);
   // the copy needn't match the original's bytes, and isn't cross-origin
   el.removeAttribute('integrity');
   el.removeAttribute('crossorigin');
