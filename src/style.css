@@ -1,0 +1,147 @@
+/* Page shell, in JupyterLab's light theme colors (index.html has the rest). */
+
+a {
+  color: #1976d2;
+}
+
+.nbv-brand-lite {
+  color: #f37726;
+}
+
+.nbv-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.nbv-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #616161;
+  text-decoration: none;
+}
+
+a.nbv-link:hover {
+  color: #212121;
+}
+
+.nbv-icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.nbv-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.nbv-main {
+  min-height: 60vh;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.nbv-footer {
+  color: #757575;
+  font-size: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.nbv-status {
+  padding: 2em 0;
+  color: #757575;
+}
+
+.nbv-error {
+  margin: 2em 0;
+  padding: 12px 16px;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.nbv-error p {
+  margin: 0.5em 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* Landing page */
+
+.nbv-home {
+  max-width: 40em;
+  margin: 3em auto;
+}
+
+.nbv-home-form {
+  display: flex;
+  gap: 8px;
+}
+
+.nbv-home-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font: inherit;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+}
+
+.nbv-home-form button {
+  padding: 6px 14px;
+  font: inherit;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+
+.nbv-home-message {
+  color: #b71c1c;
+}
+
+/* Breadcrumbs and listings */
+
+.nbv-breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  list-style: none;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.nbv-breadcrumbs li + li::before {
+  content: '/';
+  padding: 0 8px;
+  color: #bdbdbd;
+}
+
+.nbv-breadcrumbs a,
+.nbv-table a {
+  color: #616161;
+  text-decoration: none;
+}
+
+.nbv-breadcrumbs a:hover,
+.nbv-table a:hover {
+  color: #f37726;
+}
+
+/* The notebook flows in the page instead of scrolling in its own panel. */
+
+#nbviewer .jp-Notebook,
+#nbviewer .jp-WindowedPanel-outer {
+  height: auto;
+  overflow: visible;
+}
+
+#nbviewer .jp-Notebook {
+  padding: 0;
+}

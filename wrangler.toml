@@ -1,0 +1,5 @@
+# Cloudflare Pages. Set the build command to `npm run build` in the Pages
+# project; it serves the `dist` directory, including _redirects and _headers.
+name = "nbviewerlite"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"

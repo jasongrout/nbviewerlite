@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- experimental: keep it out of search results for now -->
+    <meta name="robots" content="noindex" />
+    <title>nbviewer lite</title>
+    <style>
+      /* Shell styles needed before the app's own CSS has loaded. */
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: #212121;
+        background: #fff;
+      }
+      .nbv-header {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        padding: 8px 16px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .nbv-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: inherit;
+        text-decoration: none;
+        font-size: 20px;
+      }
+      .nbv-brand svg {
+        width: 24px;
+        height: 31px;
+      }
+      .nbv-main,
+      .nbv-footer {
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 0 16px;
+        box-sizing: border-box;
+      }
+    </style>
+    <script src="<%= requirejsUrl %>"></script>
+  </head>
+  <body>
+    <header class="nbv-header">
+      <a class="nbv-brand" href="/" aria-label="nbviewer lite home">
+        <%= jupyterLogo %>
+        <span>nbviewer <span class="nbv-brand-lite">lite</span></span>
+      </a>
+      <nav class="nbv-links" id="nbv-links" aria-label="Notebook links"></nav>
+    </header>
+    <main class="nbv-main" id="nbviewer">
+      <div class="nbv-status">Loading&hellip;</div>
+    </main>
+    <noscript>
+      <p class="nbv-main">
+        nbviewer lite renders notebooks in your browser, which requires
+        JavaScript. <a href="https://nbviewer.org/">nbviewer.org</a> renders
+        them on its server.
+      </p>
+    </noscript>
+    <footer class="nbv-footer">
+      <p>
+        This website does not host notebooks, it only renders notebooks
+        available on other websites, in your browser.
+        <a href="https://github.com/jasongrout/nbviewerlite">Source</a>
+      </p>
+    </footer>
+  </body>
+</html>
