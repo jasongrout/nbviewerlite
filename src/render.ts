@@ -8,15 +8,24 @@ import {
   EditorThemeRegistry,
   ybinding
 } from '@jupyterlab/codemirror';
+import jsonExtensions from '@jupyterlab/json-extension';
 import { createMarkdownParser } from '@jupyterlab/markedparser-extension';
 import { MathJaxTypesetter } from '@jupyterlab/mathjax-extension';
+import {
+  MermaidManager,
+  MermaidMarkdown,
+  RenderedMermaid,
+  rendererFactory as mermaidRendererFactory
+} from '@jupyterlab/mermaid';
 import type * as nbformat from '@jupyterlab/nbformat';
 import { NotebookModel, StaticNotebook } from '@jupyterlab/notebook';
+import pdfExtensions from '@jupyterlab/pdf-extension';
 import {
   RenderMimeRegistry,
   standardRendererFactories
 } from '@jupyterlab/rendermime';
 import type { IRenderMime } from '@jupyterlab/rendermime-interfaces';
+import vegaExtension from '@jupyterlab/vega5-extension';
 import { Widget } from '@lumino/widgets';
 
 import { javaScriptRendererFactory } from './javascript.ts';
@@ -24,7 +33,36 @@ import { javaScriptRendererFactory } from './javascript.ts';
 import '@jupyterlab/theme-light-extension/style/variables.css';
 import '@jupyterlab/notebook/style/index.js';
 import '@jupyterlab/mathjax-extension/style/index.js';
+import '@jupyterlab/json-extension/style/index.js';
+import '@jupyterlab/pdf-extension/style/index.js';
+import '@jupyterlab/vega5-extension/style/index.js';
+import '@jupyterlab/mermaid/style/index.js';
 import './style.css';
+
+/**
+ * The mime renderers JupyterLab adds through extensions: JSON (and JSON
+ * Lines), PDF, Vega 5 and Vega-Lite 3 to 5, and Mermaid. Their libraries
+ * (vega-embed, mermaid, the JSON tree) load only when a notebook needs them.
+ */
+const mimeExtensions: IRenderMime.IExtension[] = [
+  // each package exports an extension or a list of them
+  jsonExtensions,
+  pdfExtensions,
+  vegaExtension,
+  // What @jupyterlab/mermaid-extension registers ("one more than markdown").
+  // That package's other plugins need a JupyterLab application.
+  {
+    id: '@jupyterlab/mermaid-extension:factory',
+    rendererFactory: mermaidRendererFactory,
+    rank: 61
+  }
+].flat();
+
+// One Mermaid manager for text/vnd.mermaid outputs and ```mermaid blocks in
+// markdown, as JupyterLab's mermaid-extension sets up. Without a theme
+// manager, it uses Mermaid's default (light) theme.
+const mermaidManager = new MermaidManager();
+RenderedMermaid.manager = mermaidManager;
 
 function createEditorServices() {
   const languages = new EditorLanguageRegistry();
@@ -102,7 +140,9 @@ export function renderNotebook(
   const rendermime = new RenderMimeRegistry({
     initialFactories: standardRendererFactories,
     latexTypesetter: new MathJaxTypesetter(),
-    markdownParser: createMarkdownParser(languages),
+    markdownParser: createMarkdownParser(languages, {
+      blocks: [new MermaidMarkdown({ mermaid: mermaidManager })]
+    }),
     resolver,
     sanitizer,
     linkHandler: {
@@ -114,6 +154,10 @@ export function renderNotebook(
     }
   });
   rendermime.addFactory(javaScriptRendererFactory, 0);
+  // With the extensions' ranks, or else the factories' own, as JupyterLab does
+  for (const { rendererFactory, rank } of mimeExtensions) {
+    rendermime.addFactory(rendererFactory, rank);
+  }
 
   const readOnly = { readOnly: true };
   const notebook = new StaticNotebook({
