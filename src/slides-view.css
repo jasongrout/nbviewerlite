@@ -51,6 +51,18 @@ body.nbv-slides-page {
   inset: 0;
 }
 
+/* reveal.js's simple theme, in JupyterLab's dark colors in the dark theme */
+:root[data-nbv-theme='dark'] {
+  --r-background-color: var(--jp-layout-color0);
+  --r-main-color: var(--jp-content-font-color1);
+  --r-heading-color: var(--jp-content-font-color1);
+  --r-link-color: var(--jp-content-link-color);
+  --r-link-color-dark: var(--jp-brand-color1);
+  --r-link-color-hover: var(--jp-content-link-hover-color);
+  --r-selection-background-color: var(--jp-content-link-color);
+  --r-selection-color: var(--jp-layout-color0);
+}
+
 /* .slides is also .jp-Notebook, for JupyterLab's cell styles, but slide
    backgrounds show through it. */
 .nbv-slides .reveal .slides {

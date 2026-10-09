@@ -80,6 +80,12 @@ module.exports = (env, argv) => ({
         use: ['style-loader', 'css-loader'],
         type: 'javascript/auto'
       },
+      {
+        // before the rule above's loaders
+        test: /[\\/]@jupyterlab[\\/]theme-dark-extension[\\/]style[\\/]variables\.css$/,
+        enforce: 'pre',
+        loader: path.resolve(__dirname, 'scripts/dark-theme-loader.cjs')
+      },
       { test: /\.(html|md)$/, type: 'asset/source' },
       { test: /\.(png|jpe?g|gif|woff2?|ttf|otf|eot)$/, type: 'asset/resource' },
       // JupyterLab imports SVG icons as strings from JS, and as URLs from CSS.

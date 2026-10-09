@@ -46,6 +46,11 @@ Paths match nbviewer.org's, so changing the hostname is enough:
   [jupyterlab-open-url-parameter](https://github.com/jupyterlab-contrib/jupyterlab-open-url-parameter)
   extension), so the host must allow cross-origin requests from that site
   too; GitHub and gists do.
+- Pages come in JupyterLab's light and dark themes. A button at the right of
+  the header switches between them and the system's theme (the default); the
+  browser remembers the choice. Vega charts and Mermaid diagrams take the
+  theme they render in, and keep it until the page reloads. HTML files keep
+  the white page they expect.
 - HTML files in repositories and gists render as pages, as on nbviewer.org,
   but in a sandboxed iframe with its own (opaque) origin. Their stylesheets
   and scripts from the same repository are inlined, since

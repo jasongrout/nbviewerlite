@@ -1,8 +1,12 @@
 /**
  * JupyterLab's icon artwork, inlined as SVG (without pulling in
- * @jupyterlab/ui-components' React-based code).
+ * @jupyterlab/ui-components' React-based code), and Font Awesome's for the
+ * theme switcher, which JupyterLab has none for.
  */
 
+import circleHalf from '@fortawesome/fontawesome-free/svgs/solid/adjust.svg';
+import moon from '@fortawesome/fontawesome-free/svgs/solid/moon.svg';
+import sun from '@fortawesome/fontawesome-free/svgs/solid/sun.svg';
 import caretDown from '@jupyterlab/ui-components/style/icons/arrow/caret-down.svg';
 import caretUp from '@jupyterlab/ui-components/style/icons/arrow/caret-up.svg';
 import file from '@jupyterlab/ui-components/style/icons/filetype/file.svg';
@@ -17,14 +21,17 @@ import run from '@jupyterlab/ui-components/style/icons/toolbar/run.svg';
 const ICONS = {
   caretDown,
   caretUp,
+  circleHalf,
   code,
   download,
   file,
   folder,
   kernel,
   launch,
+  moon,
   notebook,
-  run
+  run,
+  sun
 };
 
 export type IconName = keyof typeof ICONS;

@@ -1,31 +1,84 @@
-/* Page shell, in JupyterLab's light theme colors (index.html has the rest). */
+/*
+ * Page shell, in the colors of JupyterLab's light and dark themes (theme.ts),
+ * from their variables (index.html has the rest).
+ */
+
+/* Shades between the page's background and the next layout color, which
+   JupyterLab's light theme has no variables for, and the error colors. */
+:root {
+  --nbv-shade-color1: #fafafa;
+  --nbv-shade-color2: #f5f5f5;
+  --nbv-error-color: var(--jp-error-color0);
+  --nbv-error-border-color: #ef9a9a;
+  --nbv-error-background: #ffebee;
+}
+
+:root[data-nbv-theme='dark'] {
+  --nbv-shade-color1: var(--jp-layout-color1);
+  --nbv-shade-color2: var(--jp-layout-color2);
+  --nbv-error-color: #ef9a9a;
+  --nbv-error-border-color: var(--jp-error-color1);
+  --nbv-error-background: var(--jp-rendermime-error-background);
+}
 
 a {
-  color: #1976d2;
+  color: var(--jp-brand-color1);
 }
 
 .nbv-brand-lite {
   color: #f37726;
 }
 
+/* The links, then the theme switcher, at the right of the header. When
+   they don't fit next to the name, they go below it, and the links wrap. */
+.nbv-header-end {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  margin-left: auto;
+}
+
 .nbv-links {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  margin-left: auto;
   font-size: 13px;
 }
 
+/* in the icons' color */
 .nbv-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #616161;
+  color: var(--jp-inverse-layout-color3);
   text-decoration: none;
 }
 
 a.nbv-link:hover {
-  color: #212121;
+  color: var(--jp-ui-font-color1);
+}
+
+/* theme.ts */
+.nbv-theme-toggle {
+  display: inline-flex;
+  flex: none;
+  padding: 4px;
+  color: var(--jp-inverse-layout-color3);
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
+.nbv-theme-toggle:hover {
+  color: var(--jp-ui-font-color1);
+  background: var(--nbv-shade-color2);
+}
+
+/* Font Awesome's icons have no color of their own; JupyterLab's do. */
+.nbv-theme-toggle svg {
+  fill: currentColor;
 }
 
 .nbv-icon {
@@ -47,23 +100,23 @@ a.nbv-link:hover {
 }
 
 .nbv-footer {
-  color: #757575;
+  color: var(--jp-ui-font-color2);
   font-size: 12px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--jp-border-color2);
 }
 
 .nbv-status {
   padding: 2em 0;
-  color: #757575;
+  color: var(--jp-ui-font-color2);
 }
 
 .nbv-error {
   margin: 2em 0;
   padding: 12px 16px;
-  border: 1px solid #ef9a9a;
+  border: 1px solid var(--nbv-error-border-color);
   border-radius: 4px;
-  background: #ffebee;
-  color: #b71c1c;
+  background: var(--nbv-error-background);
+  color: var(--nbv-error-color);
 }
 
 .nbv-error p {
@@ -88,21 +141,24 @@ a.nbv-link:hover {
   min-width: 0;
   padding: 6px 10px;
   font: inherit;
-  border: 1px solid #bdbdbd;
+  color: inherit;
+  border: 1px solid var(--jp-border-color1);
   border-radius: 4px;
+  background: var(--jp-layout-color1);
 }
 
 .nbv-home-form button {
   padding: 6px 14px;
   font: inherit;
-  border: 1px solid #bdbdbd;
+  color: inherit;
+  border: 1px solid var(--jp-border-color1);
   border-radius: 4px;
-  background: #f5f5f5;
+  background: var(--nbv-shade-color2);
   cursor: pointer;
 }
 
 .nbv-home-message {
-  color: #b71c1c;
+  color: var(--nbv-error-color);
 }
 
 /* Examples on the landing page: cards like JupyterLab's launcher's */
@@ -112,7 +168,7 @@ a.nbv-link:hover {
   padding-bottom: 8px;
   font-size: 18px;
   font-weight: 500;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--jp-border-color2);
 }
 
 .nbv-showcase ul {
@@ -131,7 +187,7 @@ a.nbv-link:hover {
   overflow: hidden;
   color: inherit;
   text-decoration: none;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--jp-border-color2);
   border-radius: 2px;
   box-shadow:
     0 3px 1px -2px rgba(0, 0, 0, 0.2),
@@ -155,8 +211,8 @@ a.nbv-link:hover {
   height: auto;
   aspect-ratio: 16 / 10;
   object-fit: cover;
-  background: #fafafa;
-  border-bottom: 1px solid #eeeeee;
+  background: var(--nbv-shade-color1);
+  border-bottom: 1px solid var(--jp-border-color3);
 }
 
 .nbv-showcase span {
@@ -172,19 +228,19 @@ a.nbv-link:hover {
   margin: 0 0 16px;
   padding: 8px 12px;
   list-style: none;
-  background: #fafafa;
+  background: var(--nbv-shade-color1);
   border-radius: 4px;
 }
 
 .nbv-breadcrumbs li + li::before {
   content: '/';
   padding: 0 8px;
-  color: #bdbdbd;
+  color: var(--jp-border-color1);
 }
 
 .nbv-breadcrumbs a,
 .nbv-table a {
-  color: #616161;
+  color: var(--jp-inverse-layout-color3);
   text-decoration: none;
 }
 
@@ -223,17 +279,17 @@ a.nbv-link:hover {
 .nbv-table th {
   text-align: left;
   padding: 8px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--jp-border-color2);
 }
 
 .nbv-table td {
   padding: 6px 8px;
-  border-top: 1px solid #eeeeee;
+  border-top: 1px solid var(--jp-border-color3);
   vertical-align: top;
 }
 
 .nbv-table tbody tr:nth-child(odd) {
-  background: #fafafa;
+  background: var(--nbv-shade-color1);
 }
 
 .nbv-icon-link {
@@ -260,9 +316,9 @@ a.nbv-link:hover {
   padding: 7px 10px;
   font: inherit;
   color: inherit;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--jp-border-color2);
   border-radius: 4px;
-  background: #fafafa;
+  background: var(--nbv-shade-color1);
   cursor: pointer;
 }
 
@@ -272,9 +328,9 @@ a.nbv-link:hover {
   z-index: 100;
   max-width: 90vw;
   padding: 8px 12px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--jp-border-color2);
   border-radius: 4px;
-  background: #fff;
+  background: var(--jp-layout-color1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -290,14 +346,14 @@ a.nbv-link:hover {
 /* In the header, the toggle looks like the links around it. */
 .nbv-links .nbv-menu-toggle {
   padding: 0;
-  color: #616161;
+  color: var(--jp-inverse-layout-color3);
   border: none;
   background: none;
 }
 
 .nbv-links .nbv-menu-toggle:hover,
 .nbv-links .nbv-menu-toggle[aria-expanded='true'] {
-  color: #212121;
+  color: var(--jp-ui-font-color1);
 }
 
 .nbv-open-menu {
@@ -308,13 +364,13 @@ a.nbv-link:hover {
 .nbv-menu-group + .nbv-menu-group {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--jp-border-color2);
 }
 
 .nbv-menu-heading {
   padding: 4px 12px 2px;
   font-size: 12px;
-  color: #757575;
+  color: var(--jp-ui-font-color2);
 }
 
 .nbv-open-menu ul {
@@ -331,7 +387,7 @@ a.nbv-link:hover {
 
 .nbv-open-menu a:hover,
 .nbv-open-menu a:focus-visible {
-  background: #f5f5f5;
+  background: var(--nbv-shade-color2);
 }
 
 .nbv-refmenu-content {
@@ -346,7 +402,7 @@ a.nbv-link:hover {
 .nbv-refmenu-list h2 {
   margin: 4px 0;
   font-size: 13px;
-  color: #757575;
+  color: var(--jp-ui-font-color2);
 }
 
 .nbv-refmenu-list ul {
@@ -364,16 +420,17 @@ a.nbv-link:hover {
 }
 
 .nbv-gist-description {
-  color: #616161;
+  color: var(--jp-inverse-layout-color3);
 }
 
-/* HTML files (html-view.ts sets the height: the rest of the window). */
+/* HTML files (html-view.ts sets the height: the rest of the window), on
+   the white page they expect, in either theme. */
 
 .nbv-html-frame {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--jp-border-color2);
   border-radius: 4px;
   background: #fff;
 }
