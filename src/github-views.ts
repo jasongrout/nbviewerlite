@@ -19,6 +19,7 @@ import {
   type IContentsEntry,
   rawUrl,
   repoFromApiUrl,
+  repoViewerPath,
   sortEntries,
   treeUrl
 } from './github.ts';
@@ -117,6 +118,13 @@ export async function showGithubBlob(
   const { user, repo, ref, path } = loc;
   const raw = rawUrl(user, repo, ref, path);
   const filename = path.split('/').pop() ?? path;
+  const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+
+  // Relative links: files in the repo open through this view, like in nbviewer.
+  const viewerLink = (url: string) => {
+    const target = repoViewerPath(url, user, repo, ref);
+    return target === null ? null : viewerUrl(target);
+  };
 
   if (!path.endsWith('.ipynb')) {
     setTitle(filename);
@@ -140,32 +148,10 @@ export async function showGithubBlob(
     return;
   }
 
-  // Relative links: files in the repo open through this view, like in nbviewer.
-  const rawBase = rawUrl(user, repo, ref, '');
-  const linkFor = (absolute: string) => {
-    if (!absolute.startsWith(rawBase)) {
-      return absolute;
-    }
-    const rest = new URL(absolute).pathname.slice(
-      new URL(rawBase).pathname.length
-    );
-    const target = rest
-      .replace(/\/+$/, '')
-      .split('/')
-      .map(decodeURIComponent)
-      .join('/');
-    return viewerUrl(
-      target
-        ? githubPath('blob', user, repo, ref, target)
-        : githubPath('tree', user, repo, ref, '')
-    );
-  };
-
-  const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
   await showNotebook(ctx, {
     url: raw,
     title: filename,
-    linkFor,
+    linkFor: url => viewerLink(url) ?? url,
     breadcrumbs: repoCrumbs(loc, dir),
     provider: [blobUrl(user, repo, ref, path), 'GitHub'],
     executorUrl: binderUrl(ctx, loc, path),
