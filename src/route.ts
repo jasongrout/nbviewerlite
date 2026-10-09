@@ -15,12 +15,18 @@
  * a query string on the remote URL is carried as a final, percent-encoded
  * path segment starting with "?" (see transform_ipynb_uri in nbviewer's
  * utils.py).
+ *
+ * Each of these is also served under format/{name}/ (format_handlers in
+ * nbviewer's handlers.py), which shows notebooks in another format.
  */
 
 export type Route =
   | { kind: 'home' }
   | { kind: 'notfound' }
-  /** Go to another viewer path, keeping query string and fragment. */
+  /**
+   * Go to another viewer path, in the same format, keeping query string and
+   * fragment.
+   */
   | { kind: 'redirect'; path: string }
   | {
       kind: 'url';
@@ -114,11 +120,44 @@ const ROUTES: Matcher[] = [
   [/^gist\/([^/]+)\/?$/, ([user]) => ({ kind: 'gist-user', user: dec(user) })]
 ];
 
+/** nbviewer's formats (formats.py), in its order. */
+export const FORMATS = ['html', 'slides', 'script'] as const;
+export type Format = (typeof FORMATS)[number];
+
+/**
+ * Split a viewer path into its format and the path without the
+ * format/{name}/ prefix. Paths without one are the html format, the
+ * notebook. null for unknown formats.
+ */
+export function splitFormat(
+  path: string
+): { format: Format; base: string } | null {
+  const match = /^format\/([^/]*)\/(.*)$/.exec(path);
+  if (!match) {
+    return { format: 'html', base: path };
+  }
+  const format = FORMATS.find(name => name === match[1]);
+  return format ? { format, base: match[2] } : null;
+}
+
 /**
  * Parse a viewer path (location.pathname without the leading slash),
- * still percent-encoded.
+ * still percent-encoded. Under format/{name}/, this is the route of the rest
+ * of the path; splitFormat gives the format.
  */
 export function parseRoute(path: string): Route {
+  const viewer = splitFormat(path);
+  if (viewer === null) {
+    return { kind: 'notfound' };
+  }
+  const route = parseBase(viewer.base);
+  // only provider pages have formats, not the landing page
+  return route.kind === 'home' && viewer.base !== path
+    ? { kind: 'notfound' }
+    : route;
+}
+
+function parseBase(path: string): Route {
   if (path === '') {
     return { kind: 'home' };
   }

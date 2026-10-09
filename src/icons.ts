@@ -9,18 +9,22 @@ import file from '@jupyterlab/ui-components/style/icons/filetype/file.svg';
 import folder from '@jupyterlab/ui-components/style/icons/filetype/folder.svg';
 import notebook from '@jupyterlab/ui-components/style/icons/filetype/notebook.svg';
 import kernel from '@jupyterlab/ui-components/style/icons/statusbar/kernel.svg';
+import code from '@jupyterlab/ui-components/style/icons/toolbar/code.svg';
 import download from '@jupyterlab/ui-components/style/icons/toolbar/download.svg';
 import launch from '@jupyterlab/ui-components/style/icons/toolbar/launch.svg';
+import run from '@jupyterlab/ui-components/style/icons/toolbar/run.svg';
 
 const ICONS = {
   caretDown,
   caretUp,
+  code,
   download,
   file,
   folder,
   kernel,
   launch,
-  notebook
+  notebook,
+  run
 };
 
 export type IconName = keyof typeof ICONS;
