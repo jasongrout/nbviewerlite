@@ -324,7 +324,7 @@ test('redirects under format/{name}/ stay in the format', () => {
   });
 });
 
-test('unknown formats and the landing page under format/ are not found', () => {
+test('unknown formats, the landing page and the FAQ under format/ are not found', () => {
   for (const path of [
     'format/pdf/github/ipython/',
     'format/Slides/github/ipython/',
@@ -332,7 +332,9 @@ test('unknown formats and the landing page under format/ are not found', () => {
     'format/slides/index.html',
     'format/slides',
     'format/',
-    'format/slides/format/script/github/ipython/'
+    'format/slides/format/script/github/ipython/',
+    'format/slides/faq',
+    'format/html/faq/'
   ]) {
     assert.deepEqual(parseRoute(path), { kind: 'notfound' }, path);
   }
