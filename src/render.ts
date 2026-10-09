@@ -30,6 +30,7 @@ import vegaExtension from '@jupyterlab/vega5-extension';
 import { Widget } from '@lumino/widgets';
 
 import { javaScriptRendererFactory } from './javascript.ts';
+import { withoutViewState } from './nbformat.ts';
 import { savedWidgetState, withoutMissingWidgetViews } from './widget-state.ts';
 import { widgetRendererFactory } from './widgets.ts';
 
@@ -202,7 +203,9 @@ export function renderNotebook(
   // One undo manager for the document instead of one per cell: yjs warns
   // about the per-cell ones while cells are created from JSON.
   const model = new NotebookModel({ disableDocumentWideUndoRedo: false });
-  model.fromJSON(trustCells(withoutMissingWidgetViews(nb, widgetState)));
+  model.fromJSON(
+    trustCells(withoutViewState(withoutMissingWidgetViews(nb, widgetState)))
+  );
   if (!model.getMetadata('language_info')?.name) {
     // Highlight code as Python when the notebook doesn't name its language
     // (nbformat 3 notebooks never do; the model then has an empty name), as
