@@ -11,12 +11,8 @@
  * the viewer.
  */
 
-import {
-  addNbviewerLink,
-  type IContext,
-  setTitle,
-  showFailure
-} from './context.ts';
+import { addNbviewerLink, type IContext, setTitle } from './context.ts';
+import { fileCrumbs, loadFile } from './file-view.ts';
 import {
   absoluteUrl,
   cssUrls,
@@ -25,8 +21,7 @@ import {
   opensInViewer,
   ResourceLoader
 } from './html.ts';
-import { breadcrumbs, type ILink } from './listing.ts';
-import { fetchText, LoadError } from './load.ts';
+import type { ILink } from './listing.ts';
 import { addHeaderLink, h, link, showStatus } from './page.ts';
 
 export interface IHtmlSource {
@@ -79,21 +74,10 @@ export async function showHtml(
     `file on ${source.provider[1]}`
   ];
 
-  let srcdoc: string;
-  try {
-    const text = await (source.load ?? (() => fetchText(source.url)))();
-    srcdoc = await frameDocument(text, source);
-  } catch (err) {
-    if (
-      err instanceof LoadError &&
-      err.status === 404 &&
-      source.onNotFound &&
-      (await source.onNotFound())
-    ) {
-      return;
-    }
-    const details = err instanceof LoadError ? err.details : [];
-    showFailure(ctx, err, elsewhere, ...details);
+  const srcdoc = await loadFile(ctx, source, elsewhere, text =>
+    frameDocument(text, source)
+  );
+  if (srcdoc === null) {
     return;
   }
 
@@ -108,10 +92,7 @@ export async function showHtml(
     sandbox: SANDBOX,
     srcdoc
   });
-  const crumbs = source.breadcrumbs?.length
-    ? [breadcrumbs(source.breadcrumbs)]
-    : [];
-  root.replaceChildren(...crumbs, frame);
+  root.replaceChildren(...fileCrumbs(source), frame);
 
   // As tall as the rest of the window: the frame can't size itself to its
   // content, which is cross-origin.

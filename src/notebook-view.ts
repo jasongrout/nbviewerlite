@@ -1,5 +1,3 @@
-import type * as nbformat from '@jupyterlab/nbformat';
-
 import {
   addNbviewerLink,
   type IContext,
@@ -7,9 +5,9 @@ import {
   showFailure,
   viewerUrl
 } from './context.ts';
+import { fileCrumbs, type IFileSource, loadFile } from './file-view.ts';
 import { formatLinks } from './formats.ts';
-import { breadcrumbs, type ILink } from './listing.ts';
-import { fetchText, LoadError, parseNotebook } from './load.ts';
+import { parseNotebook } from './load.ts';
 import {
   addHeaderLink,
   h,
@@ -19,24 +17,16 @@ import {
 } from './page.ts';
 import { SourceResolver } from './resolver.ts';
 
-export interface INotebookSource {
+export interface INotebookSource extends IFileSource {
   /** Where the notebook lives; relative links and images resolve against it. */
   url: string;
   /** Page title, usually the file name. */
   title: string;
-  /** The notebook's JSON text. Defaults to fetching `url`. */
-  load?: () => Promise<string>;
   /** Where relative links in the notebook go; gets absolute URLs. */
   linkFor: (absoluteUrl: string) => string;
-  breadcrumbs?: ILink[];
   /** "View on ..." header link: [url, provider name]. */
   provider?: [string, string];
   executorUrl?: string | null;
-  /**
-   * Called when loading fails with HTTP 404, before showing the error.
-   * Returns true if it took over the page (e.g. redirected).
-   */
-  onNotFound?: () => Promise<boolean>;
 }
 
 export async function showNotebook(
@@ -51,21 +41,10 @@ export async function showNotebook(
     ? [source.provider[0], `notebook on ${source.provider[1]}`]
     : [source.url, 'file itself'];
 
-  let nb: nbformat.INotebookContent;
-  try {
-    const text = await (source.load ?? (() => fetchText(source.url)))();
-    nb = parseNotebook(text, source.title);
-  } catch (err) {
-    if (
-      err instanceof LoadError &&
-      err.status === 404 &&
-      source.onNotFound &&
-      (await source.onNotFound())
-    ) {
-      return;
-    }
-    const details = err instanceof LoadError ? err.details : [];
-    showFailure(ctx, err, elsewhere, ...details);
+  const nb = await loadFile(ctx, source, elsewhere, text =>
+    parseNotebook(text, source.title)
+  );
+  if (nb === null) {
     return;
   }
 
@@ -88,9 +67,7 @@ export async function showNotebook(
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');
 
-  const crumbs = source.breadcrumbs?.length
-    ? [breadcrumbs(source.breadcrumbs)]
-    : [];
+  const crumbs = fileCrumbs(source);
   if (nb.cells.length === 0) {
     root.replaceChildren(
       ...crumbs,
