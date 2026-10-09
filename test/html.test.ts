@@ -65,6 +65,11 @@ test('dataUrl encodes UTF-8 as base64', () => {
   // longer than one chunk
   const long = 'é'.repeat(100000);
   assert.equal(decode(dataUrl(long, 'text/javascript')), long);
+  // ASCII, from end to end of its range
+  const ascii = '\0.a::after { content: "~" }\n\x7f';
+  assert.equal(decode(dataUrl(ascii, 'text/css')), ascii);
+  // just past it, Latin-1 isn't UTF-8
+  assert.equal(decode(dataUrl('\x80ÿ', 'text/css')), '\x80ÿ');
 });
 
 test('cssUrls finds url() values and @import targets', () => {

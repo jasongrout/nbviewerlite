@@ -61,11 +61,15 @@ export function absoluteUrl(url: string, base: string): string | null {
 
 /** `text` as a base64 data: URL of MIME type `type`, in UTF-8. */
 export function dataUrl(text: string, type: string): string {
-  const bytes = new TextEncoder().encode(text);
-  let binary = '';
-  // in chunks: fromCharCode takes its arguments on the stack
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  // ASCII is its own UTF-8, and copying it byte by byte is slow
+  let binary = text;
+  if (!/^[\0-\x7f]*$/.test(text)) {
+    const bytes = new TextEncoder().encode(text);
+    binary = '';
+    // in chunks: fromCharCode takes its arguments on the stack
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    }
   }
   return `data:${type};charset=utf-8;base64,${btoa(binary)}`;
 }
