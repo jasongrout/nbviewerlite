@@ -212,11 +212,9 @@ test.describe('an HTML file in a repository', () => {
       await links(page.getByRole('navigation', { name: 'Breadcrumb' }))
     ).toEqual([
       ['demo', '/github/fx/demo/tree/main/'],
-      ['docs', '/github/fx/demo/tree/main/docs/']
+      ['docs', '/github/fx/demo/tree/main/docs/'],
+      ['report.html', VIEW]
     ]);
-    await expect(
-      page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('listitem')
-    ).toHaveText(['demo', 'docs', 'report.html']);
   });
 
   test('fills the window below the header', async ({ page }) => {

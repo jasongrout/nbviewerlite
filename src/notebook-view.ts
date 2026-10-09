@@ -107,7 +107,7 @@ export async function showNotebook(
   addNbviewerLink(ctx);
   addHeaderLink(source.url, 'Download Notebook', 'download');
 
-  const crumbs = fileCrumbs(source);
+  const crumbs = fileCrumbs(ctx, source);
   if (nb.cells.length === 0) {
     root.replaceChildren(
       ...crumbs,

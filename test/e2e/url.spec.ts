@@ -31,12 +31,15 @@ test('a notebook over http (url/)', async ({ page, web }) => {
   await page.goto('/url/nb.example/notebooks/xkcd.ipynb');
   await expect(page.getByRole('heading', { name: 'XKCD plots' })).toBeVisible();
   await expect(page).toHaveTitle('xkcd.ipynb - nbviewer lite');
-  // the file name above it, as the current page
-  const crumbs = page
-    .getByRole('navigation', { name: 'Breadcrumb' })
-    .getByRole('listitem');
-  await expect(crumbs).toHaveText(['xkcd.ipynb']);
-  await expect(crumbs).toHaveAttribute('aria-current', 'page');
+  // the file name above it, a link to this page
+  const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+  expect(await links(crumbs)).toEqual([
+    ['xkcd.ipynb', '/url/nb.example/notebooks/xkcd.ipynb']
+  ]);
+  await expect(crumbs.getByRole('link')).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
   await expect(page.getByText('1 + 1')).toBeVisible();
   await expect(page.getByText('2', { exact: true })).toBeVisible();
   // the kernel is a label, not a link

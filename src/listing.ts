@@ -11,13 +11,13 @@ export interface ILink {
   name: string;
 }
 
-/** Links up to the page, then `current`, the page's own name, if given. */
-export function breadcrumbs(crumbs: ILink[], current?: string): HTMLElement {
-  const items = crumbs.map(crumb =>
-    h('li', {}, h('a', { href: crumb.url }, crumb.name))
-  );
+/** Links up to the page, then `current`, the page itself, if given. */
+export function breadcrumbs(crumbs: ILink[], current?: ILink): HTMLElement {
+  const crumb = ({ url, name }: ILink, attrs: Record<string, string> = {}) =>
+    h('li', {}, h('a', { href: url, ...attrs }, name));
+  const items = crumbs.map(link => crumb(link));
   if (current) {
-    items.push(h('li', { 'aria-current': 'page' }, current));
+    items.push(crumb(current, { 'aria-current': 'page' }));
   }
   return h(
     'nav',

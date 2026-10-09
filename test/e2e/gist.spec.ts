@@ -82,9 +82,9 @@ test('a notebook in a gist', async ({ page, github, web }) => {
   await page.goto(`/gist/fperez/${GIST}/analysis.ipynb`);
   await expect(page.getByRole('heading', { name: 'Analysis' })).toBeVisible();
   await expect(page).toHaveTitle('analysis.ipynb - nbviewer lite');
-  await expect(
-    page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('listitem')
-  ).toHaveText(['analysis.ipynb']);
+  expect(
+    await links(page.getByRole('navigation', { name: 'Breadcrumb' }))
+  ).toEqual([['analysis.ipynb', `/gist/fperez/${GIST}/analysis.ipynb`]]);
   await expect(headerLinks(page)).toContainText('Python 3 Kernel');
   // among others (other formats of the notebook, say)
   await openInMenu(page);

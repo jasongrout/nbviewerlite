@@ -249,6 +249,11 @@ a.nbv-link:hover {
   text-decoration: none;
 }
 
+/* the page itself, in the text's color: where the trail leads */
+.nbv-breadcrumbs a[aria-current='page'] {
+  color: inherit;
+}
+
 .nbv-breadcrumbs a:hover,
 .nbv-table a:hover {
   color: #f37726;

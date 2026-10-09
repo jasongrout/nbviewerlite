@@ -4,7 +4,7 @@
  * the breadcrumbs above it.
  */
 
-import { type IContext, showFailure } from './context.ts';
+import { type IContext, showFailure, viewerUrl } from './context.ts';
 import { breadcrumbs, type ILink } from './listing.ts';
 import { fetchText, LoadError } from './load.ts';
 
@@ -54,9 +54,12 @@ export async function loadFile<T>(
 
 /**
  * The breadcrumbs above the file: its directories, if it has any, and its
- * name.
+ * name, which links to this page.
  */
-export function fileCrumbs(source: IFileSource): HTMLElement[] {
+export function fileCrumbs(ctx: IContext, source: IFileSource): HTMLElement[] {
   const dirs = source.breadcrumbs ?? [];
-  return dirs.length || source.title ? [breadcrumbs(dirs, source.title)] : [];
+  const here = source.title
+    ? { url: viewerUrl(ctx.path), name: source.title }
+    : undefined;
+  return dirs.length || here ? [breadcrumbs(dirs, here)] : [];
 }

@@ -91,7 +91,7 @@ export async function showHtml(
     sandbox: SANDBOX,
     srcdoc
   });
-  root.replaceChildren(...fileCrumbs(source), frame);
+  root.replaceChildren(...fileCrumbs(ctx, source), frame);
 
   // As tall as the rest of the window: the frame can't size itself to its
   // content, which is cross-origin.
