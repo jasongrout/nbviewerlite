@@ -165,7 +165,14 @@ export async function showNotebook(
   const resolver = new SourceResolver(source.url, source.linkFor);
   try {
     // Rendering code is a separate chunk, so listing, landing and error
-    // pages stay light.
+    // pages stay light; the other formats have their own.
+    if (ctx.format === 'script') {
+      const { showScript } = await import(
+        /* webpackChunkName: "script" */ './script-view.ts'
+      );
+      await showScript(nb, root, crumbs, source.title);
+      return;
+    }
     const { renderNotebook } = await import(
       /* webpackChunkName: "render" */ './render.ts'
     );
