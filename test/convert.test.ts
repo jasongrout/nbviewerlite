@@ -30,7 +30,9 @@ const converted = {
   'v3-cells': 'every v3 cell and output type, with missing fields',
   'v3-downgraded': 'a v3 notebook that remembers its original version',
   v2: 'an nbformat 2 notebook',
-  v1: 'an nbformat 1 notebook'
+  v1: 'an nbformat 1 notebook',
+  // written for these tests by test/fixtures/make-heat-equation.py
+  'heat-equation': 'an nbformat 3 notebook as IPython 2 saved them'
 };
 
 for (const [name, description] of Object.entries(converted)) {
