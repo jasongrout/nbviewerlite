@@ -19,9 +19,13 @@ import {
   type IContentsEntry,
   rawUrl,
   repoFromApiUrl,
+  repoPathOf,
+  repoViewerPath,
   sortEntries,
   treeUrl
 } from './github.ts';
+import { isHtmlFile } from './html.ts';
+import { showHtml } from './html-view.ts';
 import {
   breadcrumbs,
   iconLink,
@@ -107,8 +111,9 @@ async function redirectIfDirectory(
  * github/{user}/{repo}/blob/{ref}/{path}
  *
  * Notebooks are read from raw.githubusercontent.com, which needs no API
- * request. Other files open directly, as nbviewer serves them unchanged;
- * directories redirect to their listing.
+ * request. HTML files render as pages, as nbviewer serves them. Other files
+ * open directly, as nbviewer serves them unchanged; directories redirect to
+ * their listing.
  */
 export async function showGithubBlob(
   ctx: IContext,
@@ -117,6 +122,28 @@ export async function showGithubBlob(
   const { user, repo, ref, path } = loc;
   const raw = rawUrl(user, repo, ref, path);
   const filename = path.split('/').pop() ?? path;
+  const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+
+  // Relative links: files in the repo open through this view, like in nbviewer.
+  const viewerLink = (url: string) => {
+    const target = repoViewerPath(url, user, repo, ref);
+    return target === null ? null : viewerUrl(target);
+  };
+
+  if (isHtmlFile(path)) {
+    const rawBase = rawUrl(user, repo, ref, '');
+    await showHtml(ctx, {
+      url: raw,
+      title: filename,
+      // the repo's own stylesheets and scripts, at this ref
+      inlineUrl: url => (repoPathOf(url, rawBase) === null ? null : url),
+      linkFor: viewerLink,
+      breadcrumbs: repoCrumbs(loc, dir),
+      provider: [blobUrl(user, repo, ref, path), 'GitHub'],
+      onNotFound: () => redirectIfDirectory(ctx, loc)
+    });
+    return;
+  }
 
   if (!path.endsWith('.ipynb')) {
     setTitle(filename);
@@ -140,32 +167,10 @@ export async function showGithubBlob(
     return;
   }
 
-  // Relative links: files in the repo open through this view, like in nbviewer.
-  const rawBase = rawUrl(user, repo, ref, '');
-  const linkFor = (absolute: string) => {
-    if (!absolute.startsWith(rawBase)) {
-      return absolute;
-    }
-    const rest = new URL(absolute).pathname.slice(
-      new URL(rawBase).pathname.length
-    );
-    const target = rest
-      .replace(/\/+$/, '')
-      .split('/')
-      .map(decodeURIComponent)
-      .join('/');
-    return viewerUrl(
-      target
-        ? githubPath('blob', user, repo, ref, target)
-        : githubPath('tree', user, repo, ref, '')
-    );
-  };
-
-  const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
   await showNotebook(ctx, {
     url: raw,
     title: filename,
-    linkFor,
+    linkFor: url => viewerLink(url) ?? url,
     breadcrumbs: repoCrumbs(loc, dir),
     provider: [blobUrl(user, repo, ref, path), 'GitHub'],
     executorUrl: binderUrl(ctx, loc, path),
