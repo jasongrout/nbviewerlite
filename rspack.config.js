@@ -57,7 +57,11 @@ module.exports = (env, argv) => ({
         test: /\.ts$/,
         exclude: /node_modules/,
         loader: 'builtin:swc-loader',
-        options: { jsc: { parser: { syntax: 'typescript' } } },
+        // tsconfig.json's target; JupyterLab's packages are newer than that
+        // already, so compiling our own code further down only adds helpers
+        options: {
+          jsc: { parser: { syntax: 'typescript' }, target: 'es2020' }
+        },
         type: 'javascript/auto'
       },
       {
